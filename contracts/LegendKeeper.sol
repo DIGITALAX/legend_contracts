@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "/Users/devdesign/Documents/DIGITALAX_Code/legend/node_modules/@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
+import "node_modules/@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "abis/LensHubProxy.json";
 import "abis/CollectNFT.json";
 import "./LegendDynamicNFT.sol";
+import "./LegendAccessControl.sol";
 
 contract LegendKeeper is AutomationCompatibleInterface {
     string public symbol;
@@ -17,11 +18,11 @@ contract LegendKeeper is AutomationCompatibleInterface {
     uint256 private currentCollects;
     address private deployerAddress;
 
-    CollectNFTContract private collectNFTContract;
-    LensHubProxyContract private lensHubProxyContract;
-    LegendDynamicNFT private legendDynamicNFT;
-    KeeperRegistryContract private keeperRegistryContract;
-    LegendAccessControlContract private legendAccessControlContract;
+    CollectNFT private _collectNFT;
+    LensHubProxy private _lensHubProxy;
+    LegendDynamicNFT private _legendDynamicNFT;
+    KeeperRegistry private _keeperRegistry;
+    LegendAccessControl private _legendAccessControl;
 
     modifier onlyAdmin() {
         require(
@@ -33,10 +34,10 @@ contract LegendKeeper is AutomationCompatibleInterface {
 
     constructor(
         uint256 _editionAmount,
-        address _lensHubProxyContract,
-        address _legendDynamicNFT,
-        address _keeperRegistryContract,
-        address _legendAccessControlContract,
+        address _lensHubProxyAddress,
+        address _legendDynamicNFTAddress,
+        address _keeperRegistryAddress,
+        address _legendAccessControlAddress,
         string memory _name,
         string memory _symbol
     ) {
@@ -45,14 +46,10 @@ contract LegendKeeper is AutomationCompatibleInterface {
         currentCollects = 0;
         deployerAddress = msg.sender;
 
-        lensHubProxyContract = LensHubProxyContract(_lensHubProxyContract);
-        legendDynamicNFT = LegendDynamicNFT(_legendDynamicNFT);
-        keeperRegistryContract = KeeperRegistryContract(
-            _keeperRegistryContract
-        );
-        legendAccessControlContract = LegendAccessControlContract(
-            _legendAccessControlContract
-        );
+        _lensHubProxy = LensHubProxy(_lensHubProxyAddress);
+        _legendDynamicNFT = LegendDynamicNFT(_legendDynamicNFTAddress);
+        _keeperRegistry = KeeperRegistry(_keeperRegistryAddress);
+        _legendAccessControl = LegendAccessControl(_legendAccessControlAddress);
 
         symbol = _symbol;
         name = _name;
@@ -80,33 +77,33 @@ contract LegendKeeper is AutomationCompatibleInterface {
 
     function _returnValues() private {
         if (profileId == 0) {
-            uint256 _profileId = lensHubProxyContract.getDefaultProfile();
+            uint256 _profileId = lensHubProxy.getDefaultProfile();
             _setProfileId(_profileId);
         }
 
-        if (pubId != 0 && collectNFTContract == address(0)) {
-            address collectNFT = lensHubProxyContract.getCollectNFT(
+        if (pubId != 0 && _collectNFT == address(0)) {
+            address collectNFTAddress = lensHubProxy.getCollectNFT(
                 profileId,
                 pubId
             );
 
-            // if the collectNFT address has not been set and the there has been collected editions of the post, set the collectNFT contract address and update the current collect amount
-            if (collectNFT != address(0)) {
-                _setCollectNFTAddress(collectNFT);
+            // if the collectNFT address has not been set and the there has been collected editions of the post, set the collectNFT  address and update the current collect amount
+            if (collectNFTAddress != address(0)) {
+                _setCollectNFTAddress(collectNFTAddress);
 
-                currentCollects = collectNFTContract.totalSupply();
+                currentCollects = _collectNFT.totalSupply();
             }
         }
     }
 
     function cancelUpkeep() external returns (bool success) {
-        keeperRegistryContract.cancelUpkeep(keeperId);
+        keeperRegistry.cancelUpkeep(keeperId);
         return true;
     }
 
-    function _setCollectNFTAddress(address _collectNFTContract) private {
-        require(collectNFTContract == address(0));
-        collectNFTContract = CollectNFTContract(_collectNFTContract);
+    function _setCollectNFTAddress(address _collectNFTAddress) private {
+        require(_collectNFT == address(0));
+        _collectNFT = CollectNFT(_collectNFTAddress);
     }
 
     function _setProfileId(uint256 _profileId) private {
@@ -124,11 +121,15 @@ contract LegendKeeper is AutomationCompatibleInterface {
         keeperId = _keeperId;
     }
 
+    function getCollectionNFTAddress() public returns (address) {
+        return _collectNFT;
+    }
+
     function getProfileId() public view returns (uint256) {
         return profileId;
     }
 
-    function getPostId() public view onlyAdmin returns (uint256) {
+    function getPostId() public view returns (uint256) {
         return pubId;
     }
 
