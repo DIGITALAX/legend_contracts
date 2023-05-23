@@ -2,21 +2,27 @@
 pragma solidity ^0.8.9;
 
 import "node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "node_modules/@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "node_modules/@openzeppelin/contracts/utils/Counters.sol";
 import "./LegendKeeper.sol";
 import "./LegendAccessControl.sol";
 import "abis/CollectNFT.json";
+import "abis/LensHubProxy.json";
 
-contract LegendDynamicNFT is ERC721, ERC721URIStorage {
+contract LegendDynamicNFT is ERC721 {
     using Counters for Counters.Counter;
-    uint256 private editionAmount;
-    string[] private URIArray;
+    uint256 private _editionAmount;
+    uint256 private _currentCounter;
+    uint256 private _maxSupply;
+    string[] private _URIArray;
+    string private _baseURI;
 
-    mapping(uint256 => address) private collectorMapping;
+    mapping(address => bool) private _collectorClaimedNFT;
+    mapping(address => uint256) private _collectorMapping;
+    mapping(uint256 => string) private _tokenURIs;
 
     Counters.Counter private _tokenIdCounter;
     CollectNFT private _collectNFT;
+    LensHubProxy private _lensHubProxy;
     LegendKeeper private _legendKeeper;
     LegendAccessControl private _legendAccessControl;
 
@@ -46,35 +52,50 @@ contract LegendDynamicNFT is ERC721, ERC721URIStorage {
 
     constructor(
         address _legendAccessControlAddress,
-        string[] memory _URIArray,
-        uint256 _editionAmount
+        address _lensHubProxyAddress,
+        string[] memory _URIArrayValue,
+        uint256 _editionAmountValue
     ) ERC721("LegendKeeper", "LKEEP") {
-        editionAmount = _editionAmount;
-        URIArray = _URIArray;
+        _editionAmount = _editionAmountValue;
+        _URIArray = _URIArrayValue;
+        _currentCounter = 0;
+
+        _lensHubProxy = LensHubProxy(_lensHubProxyAddress);
         _legendAccessControl = LegendAccessControl(_legendAccessControlAddress);
+        _baseURI = _URIArray[0];
     }
 
     function safeMint(address _to) external onlyCollector {
-        // collector can only mint1, total amount must be less than max supply
-        require();
-        
+        require(
+            !_collectorClaimedNFT[msg.sender],
+            "LegendDynamicNFT: Only 1 NFT can be claimed per unique collector."
+        );
+
+        require(
+            _tokenIdCounter.current() < _maxSupply,
+            "LegendDynamicNFT: Cannot mint above the max supply."
+        );
+
         uint256 _tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
 
-        _safeMint(_to, tokenId);
+        _safeMint(_to, _tokenId);
 
-        // Default to 0
-        string memory _defaultUri = URIArray[0];
-        _setTokenURI(_tokenId, _defaultUri);
+        _collectorClaimedNFT[msg.sender] = true;
+        _collectorMapping[msg.sender] = lensHubProxy.getDefaultProfile();
+
+        _setTokenURI(_tokenId, _baseURI);
     }
 
-    function updateMetadata(uint256 _totalAmountOfCollects) external onlyKeeper {
-        if (_totalAmountOfCollects > editionAmount) return;
+    function updateMetadata(
+        uint256 _totalAmountOfCollects
+    ) external onlyKeeper {
+        if (_totalAmountOfCollects > _editionAmount) return;
+
+        _currentCounter += _totalAmountOfCollects;
 
         // update new uri for all tokenids
-
-        _setTokenURI(tokenId, _tokenURI);
-
+        _baseURI = _URIArray[_currentCounter];
     }
 
     function _beforeTokenTransfer(
@@ -94,7 +115,7 @@ contract LegendDynamicNFT is ERC721, ERC721URIStorage {
     function tokenURI(
         uint256 _tokenId
     ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(_tokenId);
+        return _baseURI;
     }
 
     function supportsInterface(
@@ -117,6 +138,26 @@ contract LegendDynamicNFT is ERC721, ERC721URIStorage {
     }
 
     function getEditionAmount() public view returns (uint256) {
-        return editionAmount;
+        return _editionAmount;
+    }
+
+    function getCurrentCounter() public view returns (uint256) {
+        return _currentCounter;
+    }
+
+    function getCollectorClaimedNFT(
+        address _collectorAddress
+    ) public view returns (bool) {
+        return _collectorClaimedNFT[_collectorAddress];
+    }
+
+    function getCollectorMapping(
+        address _collectorAddress
+    ) public view returns (uint256) {
+        return _collectorMapping[_collectorAddress];
+    }
+
+    function getMaxSupply() public view returns (uint256) {
+        return _maxSupply;
     }
 }

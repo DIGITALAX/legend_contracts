@@ -10,13 +10,13 @@ import "./LegendAccessControl.sol";
 contract LegendKeeper is AutomationCompatibleInterface {
     string public symbol;
     string public name;
-    uint256 private pubId;
-    uint256 private profileId;
-    uint256 private editionAmount;
-    uint256 private keeperId;
-    uint256 private totalAmountOfCollects;
-    uint256 private currentCollects;
-    address private deployerAddress;
+    uint256 private _pubId;
+    uint256 private _profileId;
+    uint256 private _editionAmount;
+    uint256 private _keeperId;
+    uint256 private _totalAmountOfCollects;
+    uint256 private _currentCollects;
+    address private _deployerAddress;
 
     CollectNFT private _collectNFT;
     LensHubProxy private _lensHubProxy;
@@ -33,7 +33,7 @@ contract LegendKeeper is AutomationCompatibleInterface {
     }
 
     constructor(
-        uint256 _editionAmount,
+        uint256 _editionAmountValue,
         address _lensHubProxyAddress,
         address _legendDynamicNFTAddress,
         address _keeperRegistryAddress,
@@ -41,10 +41,10 @@ contract LegendKeeper is AutomationCompatibleInterface {
         string memory _name,
         string memory _symbol
     ) {
-        editionAmount = _editionAmount;
-        totalAmountOfCollects = 0;
-        currentCollects = 0;
-        deployerAddress = msg.sender;
+        _editionAmount = _editionAmountValue;
+        _totalAmountOfCollects = 0;
+        _currentCollects = 0;
+        _deployerAddress = msg.sender;
 
         _lensHubProxy = LensHubProxy(_lensHubProxyAddress);
         _legendDynamicNFT = LegendDynamicNFT(_legendDynamicNFTAddress);
@@ -65,39 +65,39 @@ contract LegendKeeper is AutomationCompatibleInterface {
     {
         _returnValues();
 
-        upkeepNeeded = currentCollects > totalAmountOfCollects;
+        upkeepNeeded = _currentCollects > _totalAmountOfCollects;
     }
 
     function performUpkeep(bytes calldata /* performData */) external override {
-        if (currentCollects > totalAmountOfCollects) {
-            totalAmountOfCollects = currentCollects;
-            legendDynamicNFT.updateMetadata(totalAmountOfCollects);
+        if (_currentCollects > _totalAmountOfCollects) {
+            _totalAmountOfCollects = _currentCollects;
+            legendDynamicNFT.updateMetadata(_totalAmountOfCollects);
         }
     }
 
     function _returnValues() private {
-        if (profileId == 0) {
-            uint256 _profileId = lensHubProxy.getDefaultProfile();
-            _setProfileId(_profileId);
+        if (_profileId == 0) {
+            uint256 _profileIdValue = _lensHubProxy.getDefaultProfile();
+            _setProfileId(_profileIdValue);
         }
 
         if (pubId != 0 && _collectNFT == address(0)) {
-            address collectNFTAddress = lensHubProxy.getCollectNFT(
-                profileId,
-                pubId
+            address collectNFTAddress = _lensHubProxy.getCollectNFT(
+                _profileId,
+                _pubId
             );
 
             // if the collectNFT address has not been set and the there has been collected editions of the post, set the collectNFT  address and update the current collect amount
             if (collectNFTAddress != address(0)) {
                 _setCollectNFTAddress(collectNFTAddress);
 
-                currentCollects = _collectNFT.totalSupply();
+                _currentCollects = _collectNFT.totalSupply();
             }
         }
     }
 
     function cancelUpkeep() external returns (bool success) {
-        keeperRegistry.cancelUpkeep(keeperId);
+        keeperRegistry.cancelUpkeep(_keeperId);
         return true;
     }
 
@@ -106,19 +106,19 @@ contract LegendKeeper is AutomationCompatibleInterface {
         _collectNFT = CollectNFT(_collectNFTAddress);
     }
 
-    function _setProfileId(uint256 _profileId) private {
-        require(profileId == 0, "LegendKeeper: ProfileId already set.");
-        profileId = _profileId;
+    function _setProfileId(uint256 _profileIdValue) private {
+        require(_profileId == 0, "LegendKeeper: ProfileId already set.");
+        profileId = _profileIdValue;
     }
 
-    function setPubId(uint256 _pubId) public onlyAdmin {
-        require(pubId == 0, "LegendKeeper: PubId already set.");
-        pubId = _pubId;
+    function setPubId(uint256 _pubIdValue) public onlyAdmin {
+        require(_pubId == 0, "LegendKeeper: PubId already set.");
+        pubId = _pubIdValue;
     }
 
-    function setKeeperId(uint256 _keeperId) public onlyAdmin {
-        require(keeperId == 0, "LegendKeeper: KeeperId already set.");
-        keeperId = _keeperId;
+    function setKeeperId(uint256 _keeperIdValue) public onlyAdmin {
+        require(_keeperId == 0, "LegendKeeper: KeeperId already set.");
+        keeperId = _keeperIdValue;
     }
 
     function getCollectionNFTAddress() public returns (address) {
@@ -126,30 +126,30 @@ contract LegendKeeper is AutomationCompatibleInterface {
     }
 
     function getProfileId() public view returns (uint256) {
-        return profileId;
+        return _profileId;
     }
 
     function getPostId() public view returns (uint256) {
-        return pubId;
+        return _pubId;
     }
 
     function getKeeperId() public view returns (uint256) {
-        return keeperId;
+        return _keeperId;
     }
 
     function getEditionAmount() public view returns (uint256) {
-        return editionAmount;
+        return _editionAmount;
     }
 
     function getDeployerAddress() public view returns (address) {
-        return deployerAddress;
+        return _deployerAddress;
     }
 
     function getTotalAmountOfCollects() public view returns (uint256) {
-        return totalAmountOfCollects;
+        return _totalAmountOfCollects;
     }
 
     function getCurrentCollects() public view returns (uint256) {
-        return currentCollects;
+        return _currentCollects;
     }
 }
