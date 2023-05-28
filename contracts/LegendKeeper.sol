@@ -1,11 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "node_modules/@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
-import "abis/LensHubProxy.json";
-import "abis/CollectNFT.json";
+import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "./LegendDynamicNFT.sol";
 import "./LegendAccessControl.sol";
+
+interface ILensHubProxy {
+    function defaultProfile(address wallet) external view returns (uint256);
+
+    function getCollectNFT(uint256 profileId, uint256 pubId)
+        external
+        view
+        returns (address);
+}
+
+interface ICollectNFT {
+    function balanceOf(address owner) external view returns (uint256);
+
+    function totalSupply() external view returns (uint256);
+}
 
 contract LegendKeeper is AutomationCompatibleInterface {
     string public symbol;
@@ -18,15 +31,15 @@ contract LegendKeeper is AutomationCompatibleInterface {
     uint256 private _currentCollects;
     address private _deployerAddress;
 
-    CollectNFT private _collectNFT;
-    LensHubProxy private _lensHubProxy;
+    ICollectNFT private _collectNFT;
+    ILensHubProxy private _lensHubProxy;
     LegendDynamicNFT private _legendDynamicNFT;
-    KeeperRegistry private _keeperRegistry;
+
     LegendAccessControl private _legendAccessControl;
 
     modifier onlyAdmin() {
         require(
-            legendAccessControl.isAdmin(msg.sender),
+            _legendAccessControl.isAdmin(msg.sender),
             "LegendAccessControl: Only admin can perform this action"
         );
         _;
@@ -36,7 +49,6 @@ contract LegendKeeper is AutomationCompatibleInterface {
         uint256 _editionAmountValue,
         address _lensHubProxyAddress,
         address _legendDynamicNFTAddress,
-        address _keeperRegistryAddress,
         address _legendAccessControlAddress,
         string memory _name,
         string memory _symbol
@@ -46,9 +58,8 @@ contract LegendKeeper is AutomationCompatibleInterface {
         _currentCollects = 0;
         _deployerAddress = msg.sender;
 
-        _lensHubProxy = LensHubProxy(_lensHubProxyAddress);
+        _lensHubProxy = ILensHubProxy(_lensHubProxyAddress);
         _legendDynamicNFT = LegendDynamicNFT(_legendDynamicNFTAddress);
-        _keeperRegistry = KeeperRegistry(_keeperRegistryAddress);
         _legendAccessControl = LegendAccessControl(_legendAccessControlAddress);
 
         symbol = _symbol;
@@ -59,29 +70,35 @@ contract LegendKeeper is AutomationCompatibleInterface {
         bytes calldata /* checkData */
     )
         external
-        view
         override
-        returns (bool upkeepNeeded, bytes memory /* performData */)
+        returns (
+            bool upkeepNeeded,
+            bytes memory /* performData */
+        )
     {
         _returnValues();
 
         upkeepNeeded = _currentCollects > _totalAmountOfCollects;
     }
 
-    function performUpkeep(bytes calldata /* performData */) external override {
+    function performUpkeep(
+        bytes calldata /* performData */
+    ) external override {
         if (_currentCollects > _totalAmountOfCollects) {
             _totalAmountOfCollects = _currentCollects;
-            legendDynamicNFT.updateMetadata(_totalAmountOfCollects);
+            _legendDynamicNFT.updateMetadata(_totalAmountOfCollects);
         }
     }
 
     function _returnValues() private {
         if (_profileId == 0) {
-            uint256 _profileIdValue = _lensHubProxy.getDefaultProfile();
+            uint256 _profileIdValue = _lensHubProxy.defaultProfile(
+                _deployerAddress
+            );
             _setProfileId(_profileIdValue);
         }
 
-        if (pubId != 0 && _collectNFT == address(0)) {
+        if (_pubId != 0 && address(_collectNFT) == address(0)) {
             address collectNFTAddress = _lensHubProxy.getCollectNFT(
                 _profileId,
                 _pubId
@@ -96,33 +113,28 @@ contract LegendKeeper is AutomationCompatibleInterface {
         }
     }
 
-    function cancelUpkeep() external returns (bool success) {
-        keeperRegistry.cancelUpkeep(_keeperId);
-        return true;
-    }
-
     function _setCollectNFTAddress(address _collectNFTAddress) private {
-        require(_collectNFT == address(0));
-        _collectNFT = CollectNFT(_collectNFTAddress);
+        require(address(_collectNFT) == address(0));
+        _collectNFT = ICollectNFT(_collectNFTAddress);
     }
 
     function _setProfileId(uint256 _profileIdValue) private {
         require(_profileId == 0, "LegendKeeper: ProfileId already set.");
-        profileId = _profileIdValue;
+        _profileId = _profileIdValue;
     }
 
     function setPubId(uint256 _pubIdValue) public onlyAdmin {
         require(_pubId == 0, "LegendKeeper: PubId already set.");
-        pubId = _pubIdValue;
+        _pubId = _pubIdValue;
     }
 
     function setKeeperId(uint256 _keeperIdValue) public onlyAdmin {
         require(_keeperId == 0, "LegendKeeper: KeeperId already set.");
-        keeperId = _keeperIdValue;
+        _keeperId = _keeperIdValue;
     }
 
-    function getCollectionNFTAddress() public returns (address) {
-        return _collectNFT;
+    function getCollectionNFTAddress() public view returns (address) {
+        return address(_collectNFT);
     }
 
     function getProfileId() public view returns (uint256) {

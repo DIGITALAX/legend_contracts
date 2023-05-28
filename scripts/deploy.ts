@@ -1,23 +1,36 @@
 import { ethers } from "hardhat";
 
-async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+const LENS_HUB_PROXY: string = "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d";
+const EDITION_AMOUNT: number = 1000;
+const URI_VALUES: string[] = [""];
 
-  const lockedAmount = ethers.utils.parseEther("1");
+const main = async () => {
+  try {
+    const Factory = await ethers.getContractFactory("LegendFactory");
 
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+    const factory = await Factory.deploy(
+      EDITION_AMOUNT,
+      LENS_HUB_PROXY,
+      "LegendKeeper",
+      "LKEEP",
+      URI_VALUES,
+      "LegendAccessControl",
+      "LAC"
+    );
 
-  await lock.deployed();
+    const WAIT_BLOCK_CONFIRMATIONS = 20;
 
-  console.log(`Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`);
-}
+    factory.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+    console.log(`Factory Contract deployed at\n${factory.address}`);
+
+    // await run(`verify:verify`, {
+    //   address: "",
+    //   constructorArguments: [""],
+    // });
+  } catch (err: any) {
+    console.error(err.message);
+  }
+};
+
+main();

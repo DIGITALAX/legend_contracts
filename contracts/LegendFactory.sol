@@ -15,7 +15,6 @@ contract LegendFactory {
     function createContracts(
         uint256 _editionAmountValue,
         address _lensHubProxyAddress,
-        address _keeperRegistryAddress,
         string memory _name,
         string memory _symbol,
         string[] memory _URIArrayValue,
@@ -45,7 +44,6 @@ contract LegendFactory {
             _editionAmountValue,
             _lensHubProxyAddress,
             address(newLegendDynamicNFT),
-            _keeperRegistryAddress,
             address(newLegendAccessControl),
             _name,
             _symbol
@@ -81,9 +79,11 @@ contract LegendFactory {
         return deployedLegendDynamicNFTs;
     }
 
-    function getDeployerToContracts(
-        address _address
-    ) public view returns (address[]) {
+    function getDeployerToContracts(address _address)
+        public
+        view
+        returns (address[] memory)
+    {
         return deployerToContracts[_address];
     }
 }
