@@ -3,17 +3,16 @@
 pragma solidity ^0.8.9;
 
 import "./LegendCollection.sol";
-import "./AccessControl.sol";
+import "./GlobalLegendAccessControl.sol";
 import "./LegendEscrow.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-
 contract LegendNFT is ERC721Enumerable {
-    AccessControl public accessControl;
-    LegendEscrow public legendEscrow;
-    LegendCollection public legendCollection;
-    uint256 public totalSupplyCount;
+    GlobalLegendAccessControl private _accessControl;
+    LegendEscrow private _legendEscrow;
+    LegendCollection private _legendCollection;
+    uint256 private _totalSupplyCount;
 
     struct Token {
         uint256 tokenId;
@@ -24,7 +23,8 @@ contract LegendNFT is ERC721Enumerable {
         string uri;
         bool isBurned;
         uint256 timestamp;
-        bool fulfillment;
+        uint256 fulfillerId;
+        string printType;
     }
 
     mapping(uint256 => Token) private tokens;
@@ -64,27 +64,30 @@ contract LegendNFT is ERC721Enumerable {
         string newURI,
         address updater
     );
-    event TokenFulfillmentUpdated(uint256 indexed tokenId, address updater);
+    event TokenFulfillerIdUpdated(
+        uint256 indexed tokenId,
+        uint256 oldFulfillerId,
+        uint256 newFulfillerId,
+        address updater
+    );
+    event TokenPrintTypeUpdated(
+        uint256 indexed tokenId,
+        string oldPrintType,
+        string newPrintType,
+        address updater
+    );
 
     modifier onlyAdmin() {
         require(
-            accessControl.isAdmin(msg.sender),
+            _accessControl.isAdmin(msg.sender),
             "AccessControl: Only admin can perform this action"
-        );
-        _;
-    }
-
-    modifier onlyCreator(uint256 _tokenId) {
-        require(
-            tokens[_tokenId].creator == msg.sender,
-            "LegendNFT: Only Token Creator Can Update Token URI"
         );
         _;
     }
 
     modifier onlyCollectionContract() {
         require(
-            msg.sender == address(legendCollection),
+            msg.sender == address(_legendCollection),
             "LegendNFT: Only collection contract can mint tokens"
         );
         _;
@@ -92,15 +95,15 @@ contract LegendNFT is ERC721Enumerable {
 
     modifier tokensInEscrow(uint256 _tokenId) {
         require(
-            ownerOf(_tokenId) == address(legendEscrow),
+            ownerOf(_tokenId) == address(_legendEscrow),
             "LegendNFT: Tokens can only be edited when whole collection is in Escrow"
         );
         _;
     }
 
     constructor(address _accessControlAddress) ERC721("LegendNFT", "CHRON") {
-        accessControl = AccessControl(_accessControlAddress);
-        totalSupplyCount = 0;
+        _accessControl = GlobalLegendAccessControl(_accessControlAddress);
+        _totalSupplyCount = 0;
     }
 
     function mintBatch(
@@ -109,13 +112,15 @@ contract LegendNFT is ERC721Enumerable {
         uint256 _collectionId,
         address _creator,
         address[] memory _acceptedTokens,
-        uint256[] memory _basePrices
+        uint256[] memory _basePrices,
+        string memory _printType,
+        uint256 _fulfillerId
     ) public onlyCollectionContract {
         uint256[] memory tokenIds = new uint256[](_amount);
         for (uint256 i = 0; i < _amount; i++) {
-            totalSupplyCount += 1;
+            _totalSupplyCount += 1;
             Token memory newToken = Token({
-                tokenId: totalSupplyCount,
+                tokenId: _totalSupplyCount,
                 collectionId: _collectionId,
                 acceptedTokens: _acceptedTokens,
                 basePrices: _basePrices,
@@ -123,16 +128,17 @@ contract LegendNFT is ERC721Enumerable {
                 uri: _uri,
                 isBurned: false,
                 timestamp: block.timestamp,
-                fulfillment: false
+                fulfillerId: _fulfillerId,
+                printType: _printType
             });
 
-            tokens[totalSupplyCount] = newToken;
-            tokenIds[i] = totalSupplyCount;
-            _safeMint(address(legendEscrow), totalSupplyCount);
-            legendEscrow.deposit(totalSupplyCount, true);
+            tokens[_totalSupplyCount] = newToken;
+            tokenIds[i] = _totalSupplyCount;
+            _safeMint(address(_legendEscrow), _totalSupplyCount);
+            _legendEscrow.deposit(_totalSupplyCount, true);
         }
 
-        emit BatchTokenMinted(address(legendEscrow), tokenIds, _uri);
+        emit BatchTokenMinted(address(_legendEscrow), tokenIds, _uri);
     }
 
     function burnBatch(uint256[] memory _tokenIds) public {
@@ -158,11 +164,12 @@ contract LegendNFT is ERC721Enumerable {
         emit TokenBurned(_tokenId);
     }
 
-    function setLegendCollection(
-        address _legendCollectionAddress
-    ) external onlyAdmin {
-        address oldAddress = address(legendCollection);
-        legendCollection = LegendCollection(_legendCollectionAddress);
+    function setLegendCollection(address _legendCollectionAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_legendCollection);
+        _legendCollection = LegendCollection(_legendCollectionAddress);
         emit LegendCollectionUpdated(
             oldAddress,
             _legendCollectionAddress,
@@ -170,23 +177,18 @@ contract LegendNFT is ERC721Enumerable {
         );
     }
 
-    function setLegendEscrow(
-        address _legendEscrowAddress
-    ) external onlyAdmin {
-        address oldAddress = address(legendEscrow);
-        legendEscrow = LegendEscrow(_legendEscrowAddress);
-        emit LegendEscrowUpdated(
-            oldAddress,
-            _legendEscrowAddress,
-            msg.sender
-        );
+    function setLegendEscrow(address _legendEscrowAddress) external onlyAdmin {
+        address oldAddress = address(_legendEscrow);
+        _legendEscrow = LegendEscrow(_legendEscrowAddress);
+        emit LegendEscrowUpdated(oldAddress, _legendEscrowAddress, msg.sender);
     }
 
-    function updateAccessControl(
-        address _newAccessControlAddress
-    ) public onlyAdmin {
-        address oldAddress = address(accessControl);
-        accessControl = AccessControl(_newAccessControlAddress);
+    function updateAccessControl(address _newAccessControlAddress)
+        public
+        onlyAdmin
+    {
+        address oldAddress = address(_accessControl);
+        _accessControl = GlobalLegendAccessControl(_newAccessControlAddress);
         emit AccessControlUpdated(
             oldAddress,
             _newAccessControlAddress,
@@ -194,31 +196,45 @@ contract LegendNFT is ERC721Enumerable {
         );
     }
 
-    function tokenURI(
-        uint256 _tokenId
-    ) public view virtual override returns (string memory) {
+    function tokenURI(uint256 _tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
         return tokens[_tokenId].uri;
+    }
+
+    function getTotalSupplyCount() public view returns (uint256) {
+        return _totalSupplyCount;
     }
 
     function getTokenCreator(uint256 _tokenId) public view returns (address) {
         return tokens[_tokenId].creator;
     }
 
-    function getTokenAcceptedTokens(
-        uint256 _tokenId
-    ) public view returns (address[] memory) {
+    function getTokenAcceptedTokens(uint256 _tokenId)
+        public
+        view
+        returns (address[] memory)
+    {
         return tokens[_tokenId].acceptedTokens;
     }
 
-    function getBasePrices(
-        uint256 _tokenId
-    ) public view returns (uint256[] memory) {
+    function getBasePrices(uint256 _tokenId)
+        public
+        view
+        returns (uint256[] memory)
+    {
         return tokens[_tokenId].basePrices;
     }
 
-    function getTokenCollection(
-        uint256 _tokenId
-    ) public view returns (uint256) {
+    function getTokenCollection(uint256 _tokenId)
+        public
+        view
+        returns (uint256)
+    {
         return tokens[_tokenId].collectionId;
     }
 
@@ -234,8 +250,16 @@ contract LegendNFT is ERC721Enumerable {
         return tokens[_tokenId].tokenId;
     }
 
-    function getTokenFulfilled(uint256 _tokenId) public view returns (bool) {
-        return tokens[_tokenId].fulfillment;
+    function getPrintType(uint256 _tokenId)
+        public
+        view
+        returns (string memory)
+    {
+        return tokens[_tokenId].printType;
+    }
+
+    function getFulfillerId(uint256 _tokenId) public view returns (uint256) {
+        return tokens[_tokenId].fulfillerId;
     }
 
     function setTokenAcceptedTokens(
@@ -252,26 +276,65 @@ contract LegendNFT is ERC721Enumerable {
         );
     }
 
-    function setBasePrices(
-        uint256 _tokenId,
-        uint256[] memory _newPrices
-    ) public onlyCollectionContract tokensInEscrow(_tokenId) {
+    function setBasePrices(uint256 _tokenId, uint256[] memory _newPrices)
+        public
+        onlyCollectionContract
+        tokensInEscrow(_tokenId)
+    {
         uint256[] memory oldPrices = tokens[_tokenId].basePrices;
         tokens[_tokenId].basePrices = _newPrices;
         emit TokenBasePriceUpdated(_tokenId, oldPrices, _newPrices, msg.sender);
     }
 
-    function setTokenFulfilled(uint256 _tokenId) public onlyCollectionContract {
-        tokens[_tokenId].fulfillment = true;
-        emit TokenFulfillmentUpdated(_tokenId, msg.sender);
+    function setFulfillerId(uint256 _tokenId, uint256 _newFulfillerId)
+        public
+        onlyCollectionContract
+        tokensInEscrow(_tokenId)
+    {
+        uint256 oldFulfillerId = tokens[_tokenId].fulfillerId;
+        tokens[_tokenId].fulfillerId = _newFulfillerId;
+        emit TokenFulfillerIdUpdated(
+            _tokenId,
+            oldFulfillerId,
+            _newFulfillerId,
+            msg.sender
+        );
     }
 
-    function setTokenURI(
-        uint256 _tokenId,
-        string memory _newURI
-    ) public onlyCollectionContract tokensInEscrow(_tokenId) {
+    function setPrintType(uint256 _tokenId, string memory _newPrintType)
+        public
+        onlyCollectionContract
+        tokensInEscrow(_tokenId)
+    {
+        string memory oldPrintType = tokens[_tokenId].printType;
+        tokens[_tokenId].printType = _newPrintType;
+        emit TokenPrintTypeUpdated(
+            _tokenId,
+            oldPrintType,
+            _newPrintType,
+            msg.sender
+        );
+    }
+
+    function setTokenURI(uint256 _tokenId, string memory _newURI)
+        public
+        onlyCollectionContract
+        tokensInEscrow(_tokenId)
+    {
         string memory oldURI = tokens[_tokenId].uri;
         tokens[_tokenId].uri = _newURI;
         emit TokenURIUpdated(_tokenId, oldURI, _newURI, msg.sender);
+    }
+
+    function getAccessControlContract() public view returns (address) {
+        return address(_accessControl);
+    }
+
+    function getLegendEscrowContract() public view returns (address) {
+        return address(_legendEscrow);
+    }
+
+    function getLegendCollectionContract() public view returns (address) {
+        return address(_legendCollection);
     }
 }

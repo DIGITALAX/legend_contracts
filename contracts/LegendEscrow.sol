@@ -5,15 +5,15 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./LegendCollection.sol";
-import "./LegendMarketplace.sol";
-import "./AccessControl.sol";
+import "./LegendMarket.sol";
+import "./GlobalLegendAccessControl.sol";
 import "./LegendNFT.sol";
 
 contract LegendEscrow is ERC721Holder {
-    AccessControl public accessControl;
-    LegendCollection public legendCollection;
-    LegendMarketplace public legendMarketplace;
-    LegendNFT public legendNFT;
+    GlobalLegendAccessControl private _accessControl;
+    LegendCollection private _legendCollection;
+    LegendMarket private _legendMarketplace;
+    LegendNFT private _legendNFT;
     string public symbol;
     string public name;
 
@@ -48,28 +48,26 @@ contract LegendEscrow is ERC721Holder {
         string memory _symbol,
         string memory _name
     ) {
-        legendCollection = LegendCollection(_legendCollectionContract);
-        legendMarketplace = LegendMarketplace(
-            _legendMarketplaceContract
-        );
-        accessControl = AccessControl(_accessControlContract);
-        legendNFT = LegendNFT(_legendNFTContract);
+        _legendCollection = LegendCollection(_legendCollectionContract);
+        _legendMarketplace = LegendMarket(_legendMarketplaceContract);
+        _accessControl = GlobalLegendAccessControl(_accessControlContract);
+        _legendNFT = LegendNFT(_legendNFTContract);
         symbol = _symbol;
         name = _name;
     }
 
     modifier onlyAdmin() {
         require(
-            accessControl.isAdmin(msg.sender),
-            "AccessControl: Only admin can perform this action"
+            _accessControl.isAdmin(msg.sender),
+            "GlobalLegendAccessControl: Only admin can perform this action"
         );
         _;
     }
 
     modifier onlyDepositer() {
         require(
-            msg.sender == address(legendCollection) ||
-                msg.sender == address(legendNFT),
+            msg.sender == address(_legendCollection) ||
+                msg.sender == address(_legendNFT),
             "LegendEscrow: Only the Legend Collection or NFT contract can call this function"
         );
         _;
@@ -77,15 +75,15 @@ contract LegendEscrow is ERC721Holder {
 
     modifier onlyReleaser(bool _isBurn, uint256 _tokenId) {
         require(
-            msg.sender == address(legendMarketplace) ||
-                msg.sender == address(legendCollection) ||
-                msg.sender == address(legendNFT),
+            msg.sender == address(_legendMarketplace) ||
+                msg.sender == address(_legendCollection) ||
+                msg.sender == address(_legendNFT),
             "LegendEscrow: Only the Legend Marketplace contract can call this function"
         );
         if (_isBurn) {
             require(
-                legendNFT.getTokenCreator(_tokenId) == msg.sender ||
-                    address(legendCollection) == msg.sender,
+                _legendNFT.getTokenCreator(_tokenId) == msg.sender ||
+                    address(_legendCollection) == msg.sender,
                 "LegendEscrow: Only the creator of the token can transfer it to the burn address"
             );
         }
@@ -94,7 +92,7 @@ contract LegendEscrow is ERC721Holder {
 
     function deposit(uint256 _tokenId, bool _bool) external onlyDepositer {
         require(
-            legendNFT.ownerOf(_tokenId) == address(this),
+            _legendNFT.ownerOf(_tokenId) == address(this),
             "LegendEscrow: Token must be owned by escrow contract or Owner"
         );
         _deposited[_tokenId] = _bool;
@@ -105,23 +103,21 @@ contract LegendEscrow is ERC721Holder {
         bool _isBurn,
         address _to
     ) external onlyReleaser(_isBurn, _tokenId) {
-        require(
-            _deposited[_tokenId],
-            "LegendEscrow: Token must be in escrow"
-        );
+        require(_deposited[_tokenId], "LegendEscrow: Token must be in escrow");
         _deposited[_tokenId] = false;
         if (_isBurn) {
-            legendNFT.burn(_tokenId);
+            _legendNFT.burn(_tokenId);
         } else {
-            legendNFT.safeTransferFrom(address(this), _to, _tokenId);
+            _legendNFT.safeTransferFrom(address(this), _to, _tokenId);
         }
     }
 
-    function updateLegendMarketplace(
-        address _newLegendMarketplace
-    ) external onlyAdmin {
-        address oldAddress = address(accessControl);
-        legendMarketplace = LegendMarketplace(_newLegendMarketplace);
+    function updateLegendMarketplace(address _newLegendMarketplace)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_accessControl);
+        _legendMarketplace = LegendMarket(_newLegendMarketplace);
         emit LegendMarketplaceUpdated(
             oldAddress,
             _newLegendMarketplace,
@@ -129,11 +125,12 @@ contract LegendEscrow is ERC721Holder {
         );
     }
 
-    function updateLegendCollection(
-        address _newLegendCollection
-    ) external onlyAdmin {
-        address oldAddress = address(legendCollection);
-        legendCollection = LegendCollection(_newLegendCollection);
+    function updateLegendCollection(address _newLegendCollection)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_legendCollection);
+        _legendCollection = LegendCollection(_newLegendCollection);
         emit LegendCollectionUpdated(
             oldAddress,
             _newLegendCollection,
@@ -141,11 +138,12 @@ contract LegendEscrow is ERC721Holder {
         );
     }
 
-    function updateAccessControl(
-        address _newAccessControlAddress
-    ) external onlyAdmin {
-        address oldAddress = address(accessControl);
-        accessControl = AccessControl(_newAccessControlAddress);
+    function updateAccessControl(address _newAccessControlAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_accessControl);
+        _accessControl = GlobalLegendAccessControl(_newAccessControlAddress);
         emit AccessControlUpdated(
             oldAddress,
             _newAccessControlAddress,
@@ -153,15 +151,25 @@ contract LegendEscrow is ERC721Holder {
         );
     }
 
-    function updateLegendNFT(
-        address _newLegendNFTAddress
-    ) external onlyAdmin {
-        address oldAddress = address(legendNFT);
-        legendNFT = LegendNFT(_newLegendNFTAddress);
-        emit LegendNFTUpdated(
-            oldAddress,
-            _newLegendNFTAddress,
-            msg.sender
-        );
+    function updateLegendNFT(address _newLegendNFTAddress) external onlyAdmin {
+        address oldAddress = address(_legendNFT);
+        _legendNFT = LegendNFT(_newLegendNFTAddress);
+        emit LegendNFTUpdated(oldAddress, _newLegendNFTAddress, msg.sender);
+    }
+
+    function getAccessControlContract() public view returns (address) {
+        return address(_accessControl);
+    }
+
+    function getLegendNFTContract() public view returns (address) {
+        return address(_legendNFT);
+    }
+
+    function getLegendMarketContract() public view returns (address) {
+        return address(_legendMarketplace);
+    }
+
+    function getLegendCollectionContract() public view returns (address) {
+        return address(_legendCollection);
     }
 }

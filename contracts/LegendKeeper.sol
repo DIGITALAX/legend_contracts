@@ -133,7 +133,7 @@ contract LegendKeeper is AutomationCompatibleInterface {
         _keeperId = _keeperIdValue;
     }
 
-    function getCollectionNFTAddress() public view returns (address) {
+    function getCollectionNFTAddress() private view returns (address) {
         return address(_collectNFT);
     }
 

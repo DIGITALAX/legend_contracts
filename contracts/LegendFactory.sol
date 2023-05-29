@@ -4,40 +4,82 @@ pragma solidity ^0.8.9;
 import "./LegendKeeper.sol";
 import "./LegendAccessControl.sol";
 import "./LegendDynamicNFT.sol";
+import "./GlobalLegendAccessControl.sol";
 
 contract LegendFactory {
-    address[] private deployedLegendKeepers;
-    address[] private deployedLegendAccessControls;
-    address[] private deployedLegendDynamicNFTs;
+    GlobalLegendAccessControl private _accessControl;
 
-    mapping(address => address[]) private deployerToContracts;
+    struct Grant {
+        address[3] contracts;
+        string name;
+        uint256 timestamp;
+        string status;
+    }
+
+    event AccessControlSet(
+        address indexed oldAccessControl,
+        address indexed newAccessControl,
+        address updater
+    );
+
+    event FactoryDeployed(
+        address keeperAddress,
+        address accessControlAddress,
+        address dynamicNFTAddress,
+        string name,
+        address indexed deployer,
+        uint256 timestamp
+    );
+
+    event GrantStatusUpdated(address deployerAddress, string status);
+
+    mapping(address => mapping(uint256 => address[]))
+        private _deployerToContracts;
+    mapping(address => Grant) private _deployerToGrant;
+    mapping(address => address) private _deployedLegendKeepers;
+    mapping(address => address) private _deployedLegendAccessControls;
+    mapping(address => address) private _deployedLegendDynamicNFTs;
+
+    modifier onlyAdmin() {
+        require(
+            _accessControl.isAdmin(msg.sender),
+            "GlobalLegendAccessControl: Only admin can perform this action"
+        );
+        _;
+    }
+
+    modifier onlyDeployerDynamicNFT(address _deployerAddress) {
+        require(
+            msg.sender == _deployedLegendDynamicNFTs[_deployerAddress],
+            "LegendFactory: Only the Dynamic NFT Address can update the grant status"
+        );
+        _;
+    }
 
     function createContracts(
         uint256 _editionAmountValue,
         address _lensHubProxyAddress,
-        string memory _name,
-        string memory _symbol,
         string[] memory _URIArrayValue,
-        string memory _nameAC,
-        string memory _symbolAC
+        address _externalOwner,
+        string memory _name
     ) public {
+        uint256 blockTimestamp = block.timestamp;
         // Deploy LegendAccessControl
         LegendAccessControl newLegendAccessControl = new LegendAccessControl(
-            _nameAC,
-            _symbolAC
+            "Legend AccessControl",
+            "LAC",
+            _externalOwner
         );
-
-        deployedLegendAccessControls.push(address(newLegendAccessControl));
 
         // Deploy LegendDynamicNFT
         LegendDynamicNFT newLegendDynamicNFT = new LegendDynamicNFT(
             address(newLegendAccessControl),
             _lensHubProxyAddress,
+            address(this),
+            _externalOwner,
             _URIArrayValue,
             _editionAmountValue
         );
-
-        deployedLegendDynamicNFTs.push(address(newLegendDynamicNFT));
 
         // Deploy LegendKeeper
         LegendKeeper newLegendKeeper = new LegendKeeper(
@@ -45,45 +87,150 @@ contract LegendFactory {
             _lensHubProxyAddress,
             address(newLegendDynamicNFT),
             address(newLegendAccessControl),
-            _name,
-            _symbol
+            "Legend Keeper",
+            "LKEEP"
         );
-
-        deployedLegendKeepers.push(address(newLegendKeeper));
 
         // Set LegendKeeper in LegendDynamicNFT contract
         newLegendDynamicNFT.setLegendKeeperContract(address(newLegendKeeper));
 
-        deployerToContracts[msg.sender].push(address(newLegendKeeper));
-        deployerToContracts[msg.sender].push(address(newLegendAccessControl));
-        deployerToContracts[msg.sender].push(address(newLegendDynamicNFT));
+        _deployerToContracts[_externalOwner][blockTimestamp].push(
+            address(newLegendKeeper)
+        );
+        _deployerToContracts[_externalOwner][blockTimestamp].push(
+            address(newLegendAccessControl)
+        );
+        _deployerToContracts[_externalOwner][blockTimestamp].push(
+            address(newLegendDynamicNFT)
+        );
+
+        _accessControl.addWriter(_externalOwner);
+
+        Grant memory grantDetails = Grant(
+            [
+                address(newLegendKeeper),
+                address(newLegendAccessControl),
+                address(newLegendDynamicNFT)
+            ],
+            _name,
+            block.timestamp,
+            "live"
+        );
+
+        _deployerToGrant[_externalOwner] = grantDetails;
+
+        _deployedLegendKeepers[_externalOwner] = address(newLegendKeeper);
+        _deployedLegendDynamicNFTs[_externalOwner] = address(
+            newLegendDynamicNFT
+        );
+        _deployedLegendAccessControls[_externalOwner] = address(
+            newLegendAccessControl
+        );
+
+        emit FactoryDeployed(
+            address(newLegendKeeper),
+            address(newLegendAccessControl),
+            address(newLegendDynamicNFT),
+            _name,
+            _externalOwner,
+            block.timestamp
+        );
     }
 
-    function getDeployedLegendKeepers() public view returns (address[] memory) {
-        return deployedLegendKeepers;
-    }
-
-    function getDeployedLegendAccessControls()
+    function getDeployedLegendKeepers(address _deployerAddress)
         public
         view
-        returns (address[] memory)
+        returns (address)
     {
-        return deployedLegendAccessControls;
+        return _deployedLegendKeepers[_deployerAddress];
     }
 
-    function getDeployedLegendDynamicNFTs()
+    function getDeployedLegendAccessControls(address _deployerAddress)
         public
         view
-        returns (address[] memory)
+        returns (address)
     {
-        return deployedLegendDynamicNFTs;
+        return _deployedLegendAccessControls[_deployerAddress];
+    }
+
+    function getDeployedLegendDynamicNFTs(address _deployerAddress)
+        public
+        view
+        returns (address)
+    {
+        return _deployedLegendDynamicNFTs[_deployerAddress];
     }
 
     function getDeployerToContracts(address _address)
         public
         view
-        returns (address[] memory)
+        returns (address[] memory, uint256[] memory)
     {
-        return deployerToContracts[_address];
+        address[] storage contracts = _deployerToContracts[_address][
+            block.timestamp
+        ];
+
+        address[] memory contractAddresses = new address[](contracts.length);
+        uint256[] memory timestamps = new uint256[](contracts.length);
+
+        for (uint256 i = 0; i < contracts.length; i++) {
+            contractAddresses[i] = contracts[i];
+            timestamps[i] = block.timestamp;
+        }
+
+        return (contractAddresses, timestamps);
+    }
+
+    function getAccessControlContract() public view returns (address) {
+        return address(_accessControl);
+    }
+
+    function setAccessControl(address _newAccessControlAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_accessControl);
+        _accessControl = GlobalLegendAccessControl(_newAccessControlAddress);
+        emit AccessControlSet(oldAddress, _newAccessControlAddress, msg.sender);
+    }
+
+    function getGrantName(address _deployerAddress)
+        public
+        view
+        returns (string memory)
+    {
+        return _deployerToGrant[_deployerAddress].name;
+    }
+
+    function getGrantContracts(address _deployerAddress)
+        public
+        view
+        returns (address[3] memory)
+    {
+        return _deployerToGrant[_deployerAddress].contracts;
+    }
+
+    function getGrantTimestamp(address _deployerAddress)
+        public
+        view
+        returns (uint256)
+    {
+        return _deployerToGrant[_deployerAddress].timestamp;
+    }
+
+    function getGrantStatus(address _deployerAddress)
+        public
+        view
+        returns (string memory)
+    {
+        return _deployerToGrant[_deployerAddress].status;
+    }
+
+    function setGrantStatus(address _deployerAddress, string memory _newStatus)
+        external
+        onlyDeployerDynamicNFT(_deployerAddress)
+    {
+        _deployerToGrant[_deployerAddress].status = _newStatus;
+        emit GrantStatusUpdated(_deployerAddress, _newStatus);
     }
 }

@@ -2,27 +2,43 @@
 
 pragma solidity ^0.8.9;
 
-import "./AccessControl.sol";
+import "./GlobalLegendAccessControl.sol";
 import "./LegendCollection.sol";
 import "./LegendEscrow.sol";
 import "./LegendNFT.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./LegendFulfillment.sol";
 
 contract LegendMarket {
-    LegendCollection public legendCollection;
-    LegendEscrow public legendEscrow;
-    LegendNFT public legendNFT;
-    AccessControl public accessControl;
+    LegendCollection private _legendCollection;
+    LegendEscrow private _legendEscrow;
+    LegendNFT private _legendNFT;
+    GlobalLegendAccessControl private _accessControl;
+    LegendFulfillment private _legendFulfillment;
+    uint256 private _orderSupply;
     string public symbol;
     string public name;
 
+    struct Order {
+        uint256 orderId;
+        uint256 tokenId;
+        string details;
+        address buyer;
+        address chosenAddress;
+        uint256 timestamp;
+        string status;
+        bool isFulfilled;
+        uint256 fulfillerId;
+    }
+
     mapping(uint256 => uint256) private tokensSold;
     mapping(uint256 => uint256[]) private tokenIdsSold;
+    mapping(uint256 => Order) private _orders;
 
     modifier onlyAdmin() {
         require(
-            accessControl.isAdmin(msg.sender),
-            "AccessControl: Only admin can perform this action"
+            _accessControl.isAdmin(msg.sender),
+            "GlobalLegendAccessControl: Only admin can perform this action"
         );
         _;
     }
@@ -49,40 +65,60 @@ contract LegendMarket {
     );
     event TokensBought(
         uint256[] tokenIds,
-        uint256 totalPrice,
         address buyer,
         address chosenAddress
+    );
+
+    event OrderCreated(
+        uint256 indexed orderId,
+        address buyer,
+        string fulfillmentInformation
+    );
+
+    event FulfillerAddressUpdated(
+        uint256 indexed fulfillerId,
+        address newFulfillerAddress
+    );
+
+    event FulfillerPercentUpdated(
+        uint256 indexed fulfillerId,
+        uint256 newFulfillerPercent
     );
 
     constructor(
         address _collectionContract,
         address _accessControlContract,
+        address _fulfillmentContract,
         address _NFTContract,
         string memory _symbol,
         string memory _name
     ) {
-        legendCollection = LegendCollection(_collectionContract);
-        accessControl = AccessControl(_accessControlContract);
-        legendNFT = LegendNFT(_NFTContract);
+        _legendCollection = LegendCollection(_collectionContract);
+        _accessControl = GlobalLegendAccessControl(_accessControlContract);
+        _legendNFT = LegendNFT(_NFTContract);
+        _legendFulfillment = LegendFulfillment(_fulfillmentContract);
         symbol = _symbol;
         name = _name;
+        _orderSupply = 0;
     }
 
     function buyTokens(
         uint256[] memory _tokenIds,
-        address _chosenTokenAddress
+        address _chosenTokenAddress,
+        string memory _fulfillmentDetails
     ) external {
         uint256 totalPrice = 0;
         uint256[] memory prices = new uint256[](_tokenIds.length);
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             require(
-                legendNFT.ownerOf(_tokenIds[i]) == address(legendEscrow),
+                _legendNFT.ownerOf(_tokenIds[i]) == address(_legendEscrow),
                 "LegendMarket: Token must be owned by Escrow"
             );
             bool isAccepted = false;
-            address[] memory acceptedTokens = legendNFT
-                .getTokenAcceptedTokens(_tokenIds[i]);
+            address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
+                _tokenIds[i]
+            );
             for (uint256 j = 0; j < acceptedTokens.length; j++) {
                 if (acceptedTokens[j] == _chosenTokenAddress) {
                     isAccepted = true;
@@ -96,11 +132,12 @@ contract LegendMarket {
         }
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            address[] memory acceptedTokens = legendNFT
-                .getTokenAcceptedTokens(_tokenIds[i]);
+            address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
+                _tokenIds[i]
+            );
             for (uint256 j = 0; j < acceptedTokens.length; j++) {
                 if (acceptedTokens[j] == _chosenTokenAddress) {
-                    prices[i] = legendNFT.getBasePrices(_tokenIds[i])[j];
+                    prices[i] = _legendNFT.getBasePrices(_tokenIds[i])[j];
                     totalPrice += prices[i];
                     break;
                 }
@@ -118,34 +155,56 @@ contract LegendMarket {
         );
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
+            uint256 _fulfillerId = _legendNFT.getFulfillerId(_tokenIds[i]);
             IERC20(_chosenTokenAddress).transferFrom(
                 msg.sender,
-                legendNFT.getTokenCreator(_tokenIds[i]),
-                prices[i]
+                _legendNFT.getTokenCreator(_tokenIds[i]),
+                prices[i] -
+                    prices[i] *
+                    _legendFulfillment.getFulfillerPercent(_fulfillerId)
             );
-            legendEscrow.release(_tokenIds[i], false, msg.sender);
+            IERC20(_chosenTokenAddress).transferFrom(
+                msg.sender,
+                _legendFulfillment.getFulfillerAddress(_fulfillerId),
+                prices[i] * _legendFulfillment.getFulfillerPercent(_fulfillerId)
+            );
+            _legendEscrow.release(_tokenIds[i], false, msg.sender);
+
+            _orderSupply++;
+
+            Order memory newOrder = Order({
+                orderId: _orderSupply,
+                tokenId: _tokenIds[i],
+                details: _fulfillmentDetails,
+                buyer: msg.sender,
+                chosenAddress: _chosenTokenAddress,
+                timestamp: block.timestamp,
+                status: "ordered",
+                isFulfilled: false,
+                fulfillerId: _fulfillerId
+            });
+
+            _orders[_orderSupply] = newOrder;
+
+            emit OrderCreated(_orderSupply, msg.sender, _fulfillmentDetails);
         }
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            tokensSold[legendNFT.getTokenCollection(_tokenIds[i])] += 1;
-            tokenIdsSold[legendNFT.getTokenCollection(_tokenIds[i])].push(
+            tokensSold[_legendNFT.getTokenCollection(_tokenIds[i])] += 1;
+            tokenIdsSold[_legendNFT.getTokenCollection(_tokenIds[i])].push(
                 _tokenIds[i]
             );
         }
 
-        emit TokensBought(
-            _tokenIds,
-            totalPrice,
-            msg.sender,
-            _chosenTokenAddress
-        );
+        emit TokensBought(_tokenIds, msg.sender, _chosenTokenAddress);
     }
 
-    function updateAccessControl(
-        address _newAccessControlAddress
-    ) external onlyAdmin {
-        address oldAddress = address(accessControl);
-        accessControl = AccessControl(_newAccessControlAddress);
+    function updateAccessControl(address _newAccessControlAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_accessControl);
+        _accessControl = GlobalLegendAccessControl(_newAccessControlAddress);
         emit AccessControlUpdated(
             oldAddress,
             _newAccessControlAddress,
@@ -153,13 +212,12 @@ contract LegendMarket {
         );
     }
 
-    function updateLegendCollection(
-        address _newLegendCollectionAddress
-    ) external onlyAdmin {
-        address oldAddress = address(legendCollection);
-        legendCollection = LegendCollection(
-            _newLegendCollectionAddress
-        );
+    function updateLegendCollection(address _newLegendCollectionAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_legendCollection);
+        _legendCollection = LegendCollection(_newLegendCollectionAddress);
         emit LegendCollectionUpdated(
             oldAddress,
             _newLegendCollectionAddress,
@@ -167,23 +225,18 @@ contract LegendMarket {
         );
     }
 
-    function updateLegendNFT(
-        address _newLegendNFTAddress
-    ) external onlyAdmin {
-        address oldAddress = address(legendNFT);
-        legendNFT = LegendNFT(_newLegendNFTAddress);
-        emit LegendNFTUpdated(
-            oldAddress,
-            _newLegendNFTAddress,
-            msg.sender
-        );
+    function updateLegendNFT(address _newLegendNFTAddress) external onlyAdmin {
+        address oldAddress = address(_legendNFT);
+        _legendNFT = LegendNFT(_newLegendNFTAddress);
+        emit LegendNFTUpdated(oldAddress, _newLegendNFTAddress, msg.sender);
     }
 
-    function setLegendEscrow(
-        address _newLegendEscrowAddress
-    ) external onlyAdmin {
-        address oldAddress = address(legendEscrow);
-        legendEscrow = LegendEscrow(_newLegendEscrowAddress);
+    function setLegendEscrow(address _newLegendEscrowAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_legendEscrow);
+        _legendEscrow = LegendEscrow(_newLegendEscrowAddress);
         emit LegendEscrowUpdated(
             oldAddress,
             _newLegendEscrowAddress,
@@ -191,15 +244,71 @@ contract LegendMarket {
         );
     }
 
-    function getCollectionSoldCount(
-        uint256 _collectionId
-    ) public view returns (uint256) {
+    function getCollectionSoldCount(uint256 _collectionId)
+        public
+        view
+        returns (uint256)
+    {
         return tokensSold[_collectionId];
     }
 
-    function getTokensSoldCollection(
-        uint256 _collectionId
-    ) public view returns (uint256[] memory) {
+    function getTokensSoldCollection(uint256 _collectionId)
+        public
+        view
+        returns (uint256[] memory)
+    {
         return tokenIdsSold[_collectionId];
+    }
+
+    function getOrderTokenId(uint256 _orderId) public view returns (uint256) {
+        return _orders[_orderId].tokenId;
+    }
+
+    function getOrderDetails(uint256 _orderId)
+        public
+        view
+        returns (string memory)
+    {
+        return _orders[_orderId].details;
+    }
+
+    function getOrderBuyer(uint256 _orderId) public view returns (address) {
+        return _orders[_orderId].buyer;
+    }
+
+    function getOrderChosenAddress(uint256 _orderId)
+        public
+        view
+        returns (address)
+    {
+        return _orders[_orderId].chosenAddress;
+    }
+
+    function getOrderTimestamp(uint256 _orderId) public view returns (uint256) {
+        return _orders[_orderId].timestamp;
+    }
+
+    function getOrderStatus(uint256 _orderId)
+        public
+        view
+        returns (string memory)
+    {
+        return _orders[_orderId].status;
+    }
+
+    function getOrderIsFulfilled(uint256 _orderId) public view returns (bool) {
+        return _orders[_orderId].isFulfilled;
+    }
+
+    function getOrderFulfillerId(uint256 _orderId)
+        public
+        view
+        returns (uint256)
+    {
+        return _orders[_orderId].fulfillerId;
+    }
+
+    function getOrderSupply() public view returns (uint256) {
+        return _orderSupply;
     }
 }

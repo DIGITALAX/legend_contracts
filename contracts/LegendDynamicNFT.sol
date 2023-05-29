@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./LegendKeeper.sol";
 import "./LegendAccessControl.sol";
+import "./LegendFactory.sol";
 
 contract LegendDynamicNFT is ERC721 {
     using Counters for Counters.Counter;
@@ -25,6 +26,7 @@ contract LegendDynamicNFT is ERC721 {
     ILensHubProxy private _lensHubProxy;
     LegendKeeper private _legendKeeper;
     LegendAccessControl private _legendAccessControl;
+    LegendFactory private _legendFactory;
 
     event TokenURIUpdated(
         uint256 indexed tokenId,
@@ -59,15 +61,19 @@ contract LegendDynamicNFT is ERC721 {
     constructor(
         address _legendAccessControlAddress,
         address _lensHubProxyAddress,
+        address _legendFactoryAddress,
+        address _deployerAddressValue,
         string[] memory _URIArrayValue,
         uint256 _editionAmountValue
     ) ERC721("LegendDynamicNFT", "LNFT") {
         _editionAmount = _editionAmountValue;
         _URIArray = _URIArrayValue;
         _currentCounter = 0;
+        _deployerAddress = _deployerAddressValue;
 
         _lensHubProxy = ILensHubProxy(_lensHubProxyAddress);
         _legendAccessControl = LegendAccessControl(_legendAccessControlAddress);
+        _legendFactory = LegendFactory(_legendFactoryAddress);
         _myBaseURI = _URIArray[0];
     }
 
@@ -98,6 +104,10 @@ contract LegendDynamicNFT is ERC721 {
         onlyKeeper
     {
         if (_totalAmountOfCollects > _editionAmount) return;
+
+        if (_totalAmountOfCollects == _editionAmount) {
+            _legendFactory.setGrantStatus(_deployerAddress, "ended");
+        }
 
         _currentCounter += _totalAmountOfCollects;
 

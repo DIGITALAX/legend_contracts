@@ -3,18 +3,18 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./AccessControl.sol";
+import "./GlobalLegendAccessControl.sol";
 
 contract LegendPayment {
-    AccessControl public accessControl;
-    address[] public verifiedPaymentTokens;
+    GlobalLegendAccessControl private _accessControl;
+    address[] private _verifiedPaymentTokens;
 
     mapping(address => bool) private isVerifiedPaymentToken;
 
     modifier onlyAdmin() {
         require(
-            accessControl.isAdmin(msg.sender),
-            "AccessControl: Only admin can perform this action"
+            _accessControl.isAdmin(msg.sender),
+            "LegendAccessControl: Only admin can perform this action"
         );
         _;
     }
@@ -26,32 +26,34 @@ contract LegendPayment {
     );
 
     constructor(address _accessControlAddress) {
-        accessControl = AccessControl(_accessControlAddress);
+        _accessControl = GlobalLegendAccessControl(_accessControlAddress);
     }
 
-    function setVerifiedPaymentTokens(
-        address[] memory _paymentTokens
-    ) public onlyAdmin {
-        for (uint256 i = 0; i < verifiedPaymentTokens.length; i++) {
-            isVerifiedPaymentToken[verifiedPaymentTokens[i]] = false;
+    function setVerifiedPaymentTokens(address[] memory _paymentTokens)
+        public
+        onlyAdmin
+    {
+        for (uint256 i = 0; i < _verifiedPaymentTokens.length; i++) {
+            isVerifiedPaymentToken[_verifiedPaymentTokens[i]] = false;
         }
-        delete verifiedPaymentTokens;
+        delete _verifiedPaymentTokens;
 
         for (uint256 i = 0; i < _paymentTokens.length; i++) {
             isVerifiedPaymentToken[_paymentTokens[i]] = true;
-            verifiedPaymentTokens.push(_paymentTokens[i]);
+            _verifiedPaymentTokens.push(_paymentTokens[i]);
         }
     }
 
     function getVerifiedPaymentTokens() public view returns (address[] memory) {
-        return verifiedPaymentTokens;
+        return _verifiedPaymentTokens;
     }
 
-    function updateAccessControl(
-        address _newAccessControlAddress
-    ) external onlyAdmin {
-        address oldAddress = address(accessControl);
-        accessControl = AccessControl(_newAccessControlAddress);
+    function updateAccessControl(address _newAccessControlAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_accessControl);
+        _accessControl = GlobalLegendAccessControl(_newAccessControlAddress);
         emit AccessControlUpdated(
             oldAddress,
             _newAccessControlAddress,
@@ -59,9 +61,15 @@ contract LegendPayment {
         );
     }
 
-    function checkIfAddressVerified(
-        address _address
-    ) public view returns (bool) {
+    function checkIfAddressVerified(address _address)
+        public
+        view
+        returns (bool)
+    {
         return isVerifiedPaymentToken[_address];
+    }
+
+    function getAccessControlContract() public view returns (address) {
+        return address(_accessControl);
     }
 }
