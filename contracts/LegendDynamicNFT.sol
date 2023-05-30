@@ -15,11 +15,13 @@ contract LegendDynamicNFT is ERC721 {
     uint256 private _maxSupply;
     string[] private _URIArray;
     string private _myBaseURI;
+    string private _grantName;
     address private _deployerAddress;
 
     mapping(address => bool) private _collectorClaimedNFT;
     mapping(address => uint256) private _collectorMapping;
     mapping(uint256 => string) private _tokenURIs;
+    mapping(uint256 => mapping(address => bool)) private _collectorToPubId;
 
     Counters.Counter private _tokenIdCounter;
     ICollectNFT private _collectNFT;
@@ -64,6 +66,7 @@ contract LegendDynamicNFT is ERC721 {
         address _legendFactoryAddress,
         address _deployerAddressValue,
         string[] memory _URIArrayValue,
+        string memory _grantNameValue,
         uint256 _editionAmountValue
     ) ERC721("LegendDynamicNFT", "LNFT") {
         _editionAmount = _editionAmountValue;
@@ -75,6 +78,7 @@ contract LegendDynamicNFT is ERC721 {
         _legendAccessControl = LegendAccessControl(_legendAccessControlAddress);
         _legendFactory = LegendFactory(_legendFactoryAddress);
         _myBaseURI = _URIArray[0];
+        _grantName = _grantNameValue;
     }
 
     function safeMint(address _to) external onlyCollector {
@@ -94,6 +98,7 @@ contract LegendDynamicNFT is ERC721 {
         _safeMint(_to, _tokenId);
 
         _collectorClaimedNFT[msg.sender] = true;
+        _collectorToPubId[_legendKeeper.getPostId()][msg.sender] = true;
         _collectorMapping[msg.sender] = _lensHubProxy.defaultProfile(
             _deployerAddress
         );
@@ -106,7 +111,11 @@ contract LegendDynamicNFT is ERC721 {
         if (_totalAmountOfCollects > _editionAmount) return;
 
         if (_totalAmountOfCollects == _editionAmount) {
-            _legendFactory.setGrantStatus(_deployerAddress, "ended");
+            _legendFactory.setGrantStatus(
+                _deployerAddress,
+                "ended",
+                _grantName
+            );
         }
 
         _currentCounter += _totalAmountOfCollects;
@@ -180,7 +189,19 @@ contract LegendDynamicNFT is ERC721 {
         return _collectorMapping[_collectorAddress];
     }
 
+    function getCollectorPubId(address _address) public view returns (bool) {
+        return _collectorToPubId[_legendKeeper.getPostId()][_address];
+    }
+
     function getMaxSupply() public view returns (uint256) {
         return _maxSupply;
+    }
+
+    function getGrantName() public view returns (string memory) {
+        return _grantName;
+    }
+
+    function getDeployerAddress() public view returns (address) {
+        return _deployerAddress;
     }
 }

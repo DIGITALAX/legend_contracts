@@ -35,7 +35,7 @@ contract LegendFactory {
 
     mapping(address => mapping(uint256 => address[]))
         private _deployerToContracts;
-    mapping(address => Grant) private _deployerToGrant;
+    mapping(address => mapping(string => Grant)) private _deployerToGrant;
     mapping(address => address) private _deployedLegendKeepers;
     mapping(address => address) private _deployedLegendAccessControls;
     mapping(address => address) private _deployedLegendDynamicNFTs;
@@ -78,6 +78,7 @@ contract LegendFactory {
             address(this),
             _externalOwner,
             _URIArrayValue,
+            _name,
             _editionAmountValue
         );
 
@@ -117,7 +118,7 @@ contract LegendFactory {
             "live"
         );
 
-        _deployerToGrant[_externalOwner] = grantDetails;
+        _deployerToGrant[_externalOwner][_name] = grantDetails;
 
         _deployedLegendKeepers[_externalOwner] = address(newLegendKeeper);
         _deployedLegendDynamicNFTs[_externalOwner] = address(
@@ -194,43 +195,42 @@ contract LegendFactory {
         emit AccessControlSet(oldAddress, _newAccessControlAddress, msg.sender);
     }
 
-    function getGrantName(address _deployerAddress)
+    function getGrantName(address _deployerAddress, string memory _grantName)
         public
         view
         returns (string memory)
     {
-        return _deployerToGrant[_deployerAddress].name;
+        return _deployerToGrant[_deployerAddress][_grantName].name;
     }
 
-    function getGrantContracts(address _deployerAddress)
-        public
-        view
-        returns (address[3] memory)
-    {
-        return _deployerToGrant[_deployerAddress].contracts;
+    function getGrantContracts(
+        address _deployerAddress,
+        string memory _grantName
+    ) public view returns (address[3] memory) {
+        return _deployerToGrant[_deployerAddress][_grantName].contracts;
     }
 
-    function getGrantTimestamp(address _deployerAddress)
-        public
-        view
-        returns (uint256)
-    {
-        return _deployerToGrant[_deployerAddress].timestamp;
+    function getGrantTimestamp(
+        address _deployerAddress,
+        string memory _grantName
+    ) public view returns (uint256) {
+        return _deployerToGrant[_deployerAddress][_grantName].timestamp;
     }
 
-    function getGrantStatus(address _deployerAddress)
+    function getGrantStatus(address _deployerAddress, string memory _grantName)
         public
         view
         returns (string memory)
     {
-        return _deployerToGrant[_deployerAddress].status;
+        return _deployerToGrant[_deployerAddress][_grantName].status;
     }
 
-    function setGrantStatus(address _deployerAddress, string memory _newStatus)
-        external
-        onlyDeployerDynamicNFT(_deployerAddress)
-    {
-        _deployerToGrant[_deployerAddress].status = _newStatus;
+    function setGrantStatus(
+        address _deployerAddress,
+        string memory _newStatus,
+        string memory _grantName
+    ) external onlyDeployerDynamicNFT(_deployerAddress) {
+        _deployerToGrant[_deployerAddress][_grantName].status = _newStatus;
         emit GrantStatusUpdated(_deployerAddress, _newStatus);
     }
 }

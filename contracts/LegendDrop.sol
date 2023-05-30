@@ -55,12 +55,15 @@ contract LegendDrop {
 
     event DropDeleted(uint256 indexed dropId, address deleter);
 
-    modifier onlyCreator(uint256 _collectionId) {
-        require(
-            _legendCollection.getCollectionCreator(_collectionId) == msg.sender,
-            "LegendDrop: Only the owner of a collection can add it to a drop"
-        );
-        _;
+    modifier onlyCreator(uint256[] memory _collectionIds) {
+        for (uint256 i = 0; i < _collectionIds.length; i++) {
+            require(
+                _legendCollection.getCollectionCreator(_collectionIds[i]) ==
+                    msg.sender,
+                "LegendDrop: Only the owner of a collection can add it to a drop"
+            );
+            _;
+        }
     }
 
     modifier onlyAdmin() {
@@ -78,7 +81,7 @@ contract LegendDrop {
         string memory _name
     ) {
         _legendCollection = LegendCollection(_legendCollectionAddress);
-        _accessControl = AccessControl(_accessControlAddress);
+        _accessControl = GlobalLegendAccessControl(_accessControlAddress);
         _dropSupply = 0;
         symbol = _symbol;
         name = _name;
@@ -124,7 +127,7 @@ contract LegendDrop {
             );
         }
 
-        drops[dropSupply] = newDrop;
+        _drops[_dropSupply] = newDrop;
 
         emit DropCreated(_dropSupply, _collectionIds, msg.sender);
     }
@@ -132,7 +135,7 @@ contract LegendDrop {
     function addCollectionToDrop(
         uint256 _dropId,
         uint256[] memory _collectionIds
-    ) external onlyCreator(_collectionId) {
+    ) external onlyCreator(_collectionIds) {
         require(_drops[_dropId].dropId != 0, "LegendDrop: Drop does not exist");
         for (uint256 i; i < _collectionIds.length; i++) {
             require(
@@ -153,7 +156,7 @@ contract LegendDrop {
 
     function removeCollectionFromDrop(uint256 _collectionId) external {
         require(
-            _drops[collectionIdToDrop[_collectionId]].dropId != 0,
+            _drops[_collectionIdToDrop[_collectionId]].dropId != 0,
             "LegendDrop: Collection is not part of a drop"
         );
         require(
@@ -163,8 +166,8 @@ contract LegendDrop {
             "LegendDrop: Only creator or collection contract can remove collection"
         );
 
-        uint256[] storage collectionIds = drops[
-            collectionIdToDrop[_collectionId]
+        uint256[] storage collectionIds = _drops[
+            _collectionIdToDrop[_collectionId]
         ].collectionIds;
         uint256 collectionIndex = findIndex(collectionIds, _collectionId);
         require(
@@ -178,7 +181,7 @@ contract LegendDrop {
         collectionIds.pop();
 
         emit CollectionRemovedFromDrop(
-            collectionIdToDrop[_collectionId],
+            _collectionIdToDrop[_collectionId],
             _collectionId
         );
     }
@@ -197,24 +200,24 @@ contract LegendDrop {
     }
 
     function deleteDrop(uint256 _dropId) external {
-        require(drops[_dropId].dropId != 0, "LegendDrop: Drop does not exist");
-        for (uint256 i = 0; i < drops[_dropId].collectionIds.length; i++) {
+        require(_drops[_dropId].dropId != 0, "LegendDrop: Drop does not exist");
+        for (uint256 i = 0; i < _drops[_dropId].collectionIds.length; i++) {
             require(
-                legendCollection.getCollectionCreator(
-                    drops[_dropId].collectionIds[i]
+                _legendCollection.getCollectionCreator(
+                    _drops[_dropId].collectionIds[i]
                 ) ==
                     msg.sender &&
-                    (accessControl.isWriter(msg.sender) ||
-                        accessControl.isAdmin(msg.sender)),
+                    (_accessControl.isWriter(msg.sender) ||
+                        _accessControl.isAdmin(msg.sender)),
                 "LegendDrop: Only the owner of a collection can add it to a drop"
             );
         }
 
         uint256[] memory collectionIds = _drops[_dropId].collectionIds;
         for (uint256 i = 0; i < collectionIds.length; i++) {
-            collectionIdToDrop[collectionIds[i]] = 0;
+            _collectionIdToDrop[collectionIds[i]] = 0;
         }
-        delete drops[_dropId];
+        delete _drops[_dropId];
 
         emit DropDeleted(_dropId, msg.sender);
     }
@@ -223,8 +226,8 @@ contract LegendDrop {
         external
         onlyAdmin
     {
-        address oldAddress = address(accessControl);
-        accessControl = AccessControl(_newAccessControlAddress);
+        address oldAddress = address(_accessControl);
+        _accessControl = GlobalLegendAccessControl(_newAccessControlAddress);
         emit AccessControlUpdated(
             oldAddress,
             _newAccessControlAddress,
@@ -236,8 +239,8 @@ contract LegendDrop {
         external
         onlyAdmin
     {
-        address oldAddress = address(legendCollection);
-        legendCollection = LegendCollection(_newLegendCollectionAddress);
+        address oldAddress = address(_legendCollection);
+        _legendCollection = LegendCollection(_newLegendCollectionAddress);
         emit LegendCollectionUpdated(
             oldAddress,
             _newLegendCollectionAddress,
@@ -250,19 +253,19 @@ contract LegendDrop {
         view
         returns (uint256[] memory)
     {
-        return drops[_dropId].collectionIds;
+        return _drops[_dropId].collectionIds;
     }
 
     function getDropURI(uint256 _dropId) public view returns (string memory) {
-        return drops[_dropId].dropURI;
+        return _drops[_dropId].dropURI;
     }
 
     function getDropCreator(uint256 _dropId) public view returns (address) {
-        return drops[_dropId].creator;
+        return _drops[_dropId].creator;
     }
 
     function getDropTimestamp(uint256 _dropId) public view returns (uint256) {
-        return drops[_dropId].timestamp;
+        return _drops[_dropId].timestamp;
     }
 
     function setDropURI(uint256 _dropId, string memory _dropURI) external {
@@ -272,12 +275,12 @@ contract LegendDrop {
                     _drops[_dropId].collectionIds[i]
                 ) ==
                     msg.sender &&
-                    (accessControl.isWriter(msg.sender) ||
-                        accessControl.isAdmin(msg.sender)),
+                    (_accessControl.isWriter(msg.sender) ||
+                        _accessControl.isAdmin(msg.sender)),
                 "LegendDrop: Only the owner of a drop can edit a drop"
             );
         }
-        drops[_dropId].dropURI = _dropURI;
+        _drops[_dropId].dropURI = _dropURI;
         emit DropURIUpdated(_dropId, _dropURI);
     }
 }

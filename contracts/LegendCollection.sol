@@ -7,6 +7,16 @@ import "./GlobalLegendAccessControl.sol";
 import "./LegendPayment.sol";
 import "./LegendEscrow.sol";
 import "./LegendDrop.sol";
+import "./LegendFactory.sol";
+
+interface IDynamicNFT {
+    function getDeployerAddress() external view returns (address);
+    function getCollectorClaimedNFT(address) external view returns (bool);
+}
+
+interface ILegendKeeper {
+    function getPostId() external view returns (uint256);
+}
 
 contract LegendCollection {
     LegendNFT private _legendNFT;
@@ -14,6 +24,7 @@ contract LegendCollection {
     LegendPayment private _legendPayment;
     LegendEscrow private _legendEscrow;
     LegendDrop private _legendDrop;
+    LegendFactory private _legendFactory;
     uint256 private _collectionSupply;
     string public symbol;
     string public name;
@@ -28,9 +39,13 @@ contract LegendCollection {
         uint256 fulfillerId;
         address[] acceptedTokens;
         address creator;
+        address dynamicNFTAddress;
         string uri;
         string printType;
         bool isBurned;
+        uint256 discount;
+        uint256 pubId;
+        bool grantCollectorsOnly;
     }
 
     mapping(uint256 => Collection) private _collections;
@@ -86,6 +101,12 @@ contract LegendCollection {
         address updater
     );
 
+    event LegendFactoryUpdated(
+        address indexed oldLegendFactory,
+        address indexed newLegendFactory,
+        address updater
+    );
+
     event LegendEscrowUpdated(
         address indexed oldLegendEscrow,
         address indexed newLegendEscrow,
@@ -105,10 +126,28 @@ contract LegendCollection {
         address updater
     );
 
+    event CollectionDropIdUpdated(
+        uint256 indexed collectionId,
+        uint256 newDropId,
+        address updater
+    );
+
     event CollectionPrintTypeUpdated(
         uint256 indexed collectionId,
         string oldPrintType,
         string newPrintType,
+        address updater
+    );
+
+    event CollectionDiscountUpdated(
+        uint256 indexed collectionId,
+        uint256 discount,
+        address updater
+    );
+
+    event CollectionGrantCollectorsOnlyUpdated(
+        uint256 indexed collectionId,
+        bool grantCollectorOnly,
         address updater
     );
 
@@ -120,16 +159,26 @@ contract LegendCollection {
         _;
     }
 
+    modifier onlyCreator(uint256 _collectionId) {
+        require(
+            msg.sender == _collections[_collectionId].creator,
+            "ChromadinCollection: Only the creator can edit this collection"
+        );
+        _;
+    }
+
     constructor(
         address _legendNFTAddress,
         address _accessControlAddress,
         address _legendPaymentAddress,
+        address _legendFactoryAddress,
         string memory _symbol,
         string memory _name
     ) {
         _legendNFT = LegendNFT(_legendNFTAddress);
         _accessControl = GlobalLegendAccessControl(_accessControlAddress);
         _legendPayment = LegendPayment(_legendPaymentAddress);
+        _legendFactory = LegendFactory(_legendFactoryAddress);
         _collectionSupply = 0;
         symbol = _symbol;
         name = _name;
@@ -141,14 +190,25 @@ contract LegendCollection {
         address[] memory _acceptedTokens,
         uint256[] memory _basePrices,
         string memory _printType,
-        uint256 _fulfillerId
+        uint256 _fulfillerId,
+        uint256 _discount,
+        bool _grantCollectorsOnly,
+        string memory _grantName
     ) external {
+        // make sure only the grant publisher can mint for their grant
+        require(
+            IDynamicNFT(
+                _legendFactory.getGrantContracts(msg.sender, _grantName)[2]
+            ).getDeployerAddress() == msg.sender,
+            "LegendCollection: Only grant publishers can make collections for their grants."
+        );
         require(
             _basePrices.length == _acceptedTokens.length,
             "LegendCollection: Invalid input"
         );
         require(
-            _accessControl.isAdmin(msg.sender),
+            _accessControl.isAdmin(msg.sender) ||
+                _accessControl.isWriter(msg.sender),
             "LegendCollection: Only admin or writer can perform this action"
         );
         for (uint256 i = 0; i < _acceptedTokens.length; i++) {
@@ -166,6 +226,14 @@ contract LegendCollection {
             tokenIds[i] = _legendNFT.getTotalSupplyCount() + i + 1;
         }
 
+        uint256 _pubId = ILegendKeeper(
+            _legendFactory.getGrantContracts(msg.sender, _grantName)[0]
+        ).getPostId();
+        address _dynamicNFTAddress = _legendFactory.getGrantContracts(
+            msg.sender,
+            _grantName
+        )[2];
+
         Collection memory newCollection = Collection({
             collectionId: _collectionSupply,
             acceptedTokens: _acceptedTokens,
@@ -178,7 +246,11 @@ contract LegendCollection {
             timestamp: block.timestamp,
             printType: _printType,
             fulfillerId: _fulfillerId,
-            dropId: 0
+            dropId: 0,
+            discount: _discount,
+            grantCollectorsOnly: _grantCollectorsOnly,
+            pubId: _pubId,
+            dynamicNFTAddress: _dynamicNFTAddress
         });
 
         _collections[_collectionSupply] = newCollection;
@@ -191,20 +263,27 @@ contract LegendCollection {
             _acceptedTokens,
             _basePrices,
             _printType,
-            _fulfillerId
+            _fulfillerId,
+            _discount,
+            _grantCollectorsOnly,
+            _pubId,
+            _dynamicNFTAddress
         );
 
         emit CollectionMinted(_collectionSupply, _uri, _amount, msg.sender);
     }
 
-    function burnCollection(uint256 _collectionId) external onlyAdmin {
+    function burnCollection(uint256 _collectionId)
+        external
+        onlyCreator(_collectionId)
+    {
         require(
             !_collections[_collectionId].isBurned,
             "LegendCollection: This collection has already been burned"
         );
 
         if (getCollectionDropId(_collectionId) != 0) {
-            chromadinDrop.removeCollectionFromDrop(_collectionId);
+            _legendDrop.removeCollectionFromDrop(_collectionId);
         }
 
         for (
@@ -256,6 +335,19 @@ contract LegendCollection {
         emit LegendPaymentUpdated(
             oldAddress,
             _newLegendPaymentAddress,
+            msg.sender
+        );
+    }
+
+    function updateLegendFactory(address _newLegendFactoryAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_legendFactory);
+        _legendFactory = LegendFactory(_newLegendFactoryAddress);
+        emit LegendFactoryUpdated(
+            oldAddress,
+            _newLegendFactoryAddress,
             msg.sender
         );
     }
@@ -361,10 +453,38 @@ contract LegendCollection {
         return _collections[_collectionId].tokenIds;
     }
 
+    function getCollectionDiscount(uint256 _collectionId)
+        public
+        view
+        returns (uint256)
+    {
+        return _collections[_collectionId].discount;
+    }
+
+    function getDynamicNFTAddress(uint256 _collectionId)
+        public
+        view
+        returns (address)
+    {
+        return _collections[_collectionId].dynamicNFTAddress;
+    }
+
+    function getPubId(uint256 _collectionId) public view returns (uint256) {
+        return _collections[_collectionId].pubId;
+    }
+
+    function getCollectionGrantCollectorsOnly(uint256 _collectionId)
+        public
+        view
+        returns (bool)
+    {
+        return _collections[_collectionId].grantCollectorsOnly;
+    }
+
     function setCollectionPrintType(
         string memory _newPrintType,
         uint256 _collectionId
-    ) external onlyAdmin {
+    ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
@@ -386,7 +506,7 @@ contract LegendCollection {
     function setCollectionFulfillerId(
         uint256 _newFulfillerId,
         uint256 _collectionId
-    ) external onlyAdmin {
+    ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
@@ -407,7 +527,7 @@ contract LegendCollection {
 
     function setCollectionURI(string memory _newURI, uint256 _collectionId)
         external
-        onlyAdmin
+        onlyCreator(_collectionId)
     {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
@@ -424,16 +544,44 @@ contract LegendCollection {
 
     function setCollectionDropId(uint256 _dropId, uint256 _collectionId)
         external
-        onlyAdmin
+        onlyCreator(_collectionId)
     {
         _collections[_collectionId].dropId = _dropId;
         emit CollectionDropIdUpdated(_collectionId, _dropId, msg.sender);
     }
 
+    function setCollectionDiscount(uint256 _discount, uint256 _collectionId)
+        external
+        onlyCreator(_collectionId)
+    {
+        uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            _legendNFT.setDiscount(tokenIds[i], _discount);
+        }
+        _collections[_collectionId].discount = _discount;
+        emit CollectionDiscountUpdated(_collectionId, _discount, msg.sender);
+    }
+
+    function setCollectionGrantCollectorsOnly(
+        bool _collectorsOnly,
+        uint256 _collectionId
+    ) external onlyCreator(_collectionId) {
+        uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            _legendNFT.setGrantCollectorsOnly(tokenIds[i], _collectorsOnly);
+        }
+        _collections[_collectionId].grantCollectorsOnly = _collectorsOnly;
+        emit CollectionGrantCollectorsOnlyUpdated(
+            _collectionId,
+            _collectorsOnly,
+            msg.sender
+        );
+    }
+
     function setCollectionBasePrices(
         uint256 _collectionId,
         uint256[] memory _newPrices
-    ) external onlyAdmin {
+    ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
@@ -455,7 +603,7 @@ contract LegendCollection {
     function setCollectionAcceptedTokens(
         uint256 _collectionId,
         address[] memory _newAcceptedTokens
-    ) external onlyAdmin {
+    ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
@@ -492,5 +640,9 @@ contract LegendCollection {
 
     function getLegendNFTContract() public view returns (address) {
         return address(_legendNFT);
+    }
+
+    function getLegendFactoryContract() public view returns (address) {
+        return address(_legendFactory);
     }
 }

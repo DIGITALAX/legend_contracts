@@ -31,8 +31,8 @@ contract LegendMarket {
         uint256 fulfillerId;
     }
 
-    mapping(uint256 => uint256) private tokensSold;
-    mapping(uint256 => uint256[]) private tokenIdsSold;
+    mapping(uint256 => uint256) private _tokensSold;
+    mapping(uint256 => uint256[]) private _tokenIdsSold;
     mapping(uint256 => Order) private _orders;
 
     modifier onlyAdmin() {
@@ -40,6 +40,11 @@ contract LegendMarket {
             _accessControl.isAdmin(msg.sender),
             "GlobalLegendAccessControl: Only admin can perform this action"
         );
+        _;
+    }
+
+    modifier onlyFulfiller(uint256 _fulfillerId) {
+        require(_legendFulfillment.getFulfillerAddress(_fulfillerId), "LegendMarket: Only the fulfiller can update this status.");
         _;
     }
 
@@ -107,6 +112,16 @@ contract LegendMarket {
         address _chosenTokenAddress,
         string memory _fulfillmentDetails
     ) external {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            if (_legendNFT.getGrantCollectorsOnly(_tokenIds[i])) {
+                require(
+                    IDynamicNFT(_legendNFT.getDynamicNFTAddress(_tokenIds[i]))
+                        .getCollectorClaimedNFT(msg.sender),
+                    "LegendMarket: Must be authorized grant collector."
+                );
+            }
+        }
+
         uint256 totalPrice = 0;
         uint256[] memory prices = new uint256[](_tokenIds.length);
 
@@ -138,7 +153,20 @@ contract LegendMarket {
             for (uint256 j = 0; j < acceptedTokens.length; j++) {
                 if (acceptedTokens[j] == _chosenTokenAddress) {
                     prices[i] = _legendNFT.getBasePrices(_tokenIds[i])[j];
-                    totalPrice += prices[i];
+
+                    if (
+                        _legendNFT.getDiscount(_tokenIds[i]) != 0 &&
+                        IDynamicNFT(
+                            _legendNFT.getDynamicNFTAddress(_tokenIds[i])
+                        ).getCollectorClaimedNFT(msg.sender)
+                    ) {
+                        totalPrice +=
+                            prices[i] *
+                            _legendNFT.getDiscount(_tokenIds[i]);
+                    } else {
+                        totalPrice += prices[i];
+                    }
+
                     break;
                 }
             }
@@ -190,8 +218,8 @@ contract LegendMarket {
         }
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            tokensSold[_legendNFT.getTokenCollection(_tokenIds[i])] += 1;
-            tokenIdsSold[_legendNFT.getTokenCollection(_tokenIds[i])].push(
+            _tokensSold[_legendNFT.getTokenCollection(_tokenIds[i])] += 1;
+            _tokenIdsSold[_legendNFT.getTokenCollection(_tokenIds[i])].push(
                 _tokenIds[i]
             );
         }
@@ -243,6 +271,8 @@ contract LegendMarket {
             msg.sender
         );
     }
+
+    
 
     function getCollectionSoldCount(uint256 _collectionId)
         public
@@ -311,4 +341,21 @@ contract LegendMarket {
     function getOrderSupply() public view returns (uint256) {
         return _orderSupply;
     }
+
+    function setOrderisFulfilled(uint256 _orderId) external onlyFulfiller(_orders[_orderId].fulfillerId) {
+        _orders[_orderId].isFulfilled = true;
+    }
+
+    function setOrderStatus(uint256 _orderId, string _status) external onlyFulfiller(_orders[_orderId].fulfillerId) {
+        _orders[_orderId].status = _status;
+    } 
+
+    // only buyer
+    function setOrderDetails(uint256 _orderId, string _newDetails) external returns (bool) {
+        require(
+            
+            , "LegendMarket: Only the buyer can update their order details.")
+        _orders[_orderId].details = _newDetails;
+    }
+
 }
