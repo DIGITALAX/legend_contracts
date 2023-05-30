@@ -58,10 +58,11 @@ contract LegendFactory {
 
     function createContracts(
         uint256 _editionAmountValue,
+        uint256 _pubId,
         address _lensHubProxyAddress,
         string[] memory _URIArrayValue,
-        address _externalOwner,
-        string memory _name
+        string memory _name,
+        address _externalOwner
     ) public {
         uint256 blockTimestamp = block.timestamp;
         // Deploy LegendAccessControl
@@ -85,6 +86,7 @@ contract LegendFactory {
         // Deploy LegendKeeper
         LegendKeeper newLegendKeeper = new LegendKeeper(
             _editionAmountValue,
+            _pubId,
             _lensHubProxyAddress,
             address(newLegendDynamicNFT),
             address(newLegendAccessControl),

@@ -47,6 +47,7 @@ contract LegendKeeper is AutomationCompatibleInterface {
 
     constructor(
         uint256 _editionAmountValue,
+        uint256 _pubIdValue,
         address _lensHubProxyAddress,
         address _legendDynamicNFTAddress,
         address _legendAccessControlAddress,
@@ -64,6 +65,7 @@ contract LegendKeeper is AutomationCompatibleInterface {
 
         symbol = _symbol;
         name = _name;
+        _pubId = _pubIdValue;
     }
 
     function checkUpkeep(
@@ -121,11 +123,6 @@ contract LegendKeeper is AutomationCompatibleInterface {
     function _setProfileId(uint256 _profileIdValue) private {
         require(_profileId == 0, "LegendKeeper: ProfileId already set.");
         _profileId = _profileIdValue;
-    }
-
-    function setPubId(uint256 _pubIdValue) public onlyAdmin {
-        require(_pubId == 0, "LegendKeeper: PubId already set.");
-        _pubId = _pubIdValue;
     }
 
     function setKeeperId(uint256 _keeperIdValue) public onlyAdmin {
