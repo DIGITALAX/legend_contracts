@@ -44,7 +44,10 @@ contract LegendMarket {
     }
 
     modifier onlyFulfiller(uint256 _fulfillerId) {
-        require(_legendFulfillment.getFulfillerAddress(_fulfillerId), "LegendMarket: Only the fulfiller can update this status.");
+        require(
+            _legendFulfillment.getFulfillerAddress(_fulfillerId) == msg.sender,
+            "LegendMarket: Only the fulfiller can update this status."
+        );
         _;
     }
 
@@ -272,14 +275,12 @@ contract LegendMarket {
         );
     }
 
-    
-
     function getCollectionSoldCount(uint256 _collectionId)
         public
         view
         returns (uint256)
     {
-        return tokensSold[_collectionId];
+        return _tokensSold[_collectionId];
     }
 
     function getTokensSoldCollection(uint256 _collectionId)
@@ -287,7 +288,7 @@ contract LegendMarket {
         view
         returns (uint256[] memory)
     {
-        return tokenIdsSold[_collectionId];
+        return _tokenIdsSold[_collectionId];
     }
 
     function getOrderTokenId(uint256 _orderId) public view returns (uint256) {
@@ -342,20 +343,28 @@ contract LegendMarket {
         return _orderSupply;
     }
 
-    function setOrderisFulfilled(uint256 _orderId) external onlyFulfiller(_orders[_orderId].fulfillerId) {
+    function setOrderisFulfilled(uint256 _orderId)
+        external
+        onlyFulfiller(_orders[_orderId].fulfillerId)
+    {
         _orders[_orderId].isFulfilled = true;
     }
 
-    function setOrderStatus(uint256 _orderId, string _status) external onlyFulfiller(_orders[_orderId].fulfillerId) {
+    function setOrderStatus(uint256 _orderId, string memory _status)
+        external
+        onlyFulfiller(_orders[_orderId].fulfillerId)
+    {
         _orders[_orderId].status = _status;
-    } 
-
-    // only buyer
-    function setOrderDetails(uint256 _orderId, string _newDetails) external returns (bool) {
-        require(
-            
-            , "LegendMarket: Only the buyer can update their order details.")
-        _orders[_orderId].details = _newDetails;
     }
 
+    function setOrderDetails(uint256 _orderId, string memory _newDetails)
+        external
+        returns (bool)
+    {
+        require(
+            _orders[_orderId].buyer == msg.sender,
+            "LegendMarket: Only the buyer can update their order details."
+        );
+        _orders[_orderId].details = _newDetails;
+    }
 }
