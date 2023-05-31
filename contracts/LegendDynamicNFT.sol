@@ -8,6 +8,18 @@ import "./LegendKeeper.sol";
 import "./LegendAccessControl.sol";
 import "./LegendFactory.sol";
 
+library DynamicNFTLibrary {
+    struct ConstructorArgs {
+        address legendAccessControlAddress;
+        address lensHubProxyAddress;
+        address legendFactoryAddress;
+        address deployerAddressValue;
+        string[] URIArrayValue;
+        string grantNameValue;
+        uint256 editionAmountValue;
+    }
+}
+
 contract LegendDynamicNFT is ERC721 {
     using Counters for Counters.Counter;
     uint256 private _editionAmount;
@@ -60,25 +72,22 @@ contract LegendDynamicNFT is ERC721 {
         _;
     }
 
-    constructor(
-        address _legendAccessControlAddress,
-        address _lensHubProxyAddress,
-        address _legendFactoryAddress,
-        address _deployerAddressValue,
-        string[] memory _URIArrayValue,
-        string memory _grantNameValue,
-        uint256 _editionAmountValue
-    ) ERC721("LegendDynamicNFT", "LNFT") {
-        _editionAmount = _editionAmountValue;
-        _URIArray = _URIArrayValue;
+    constructor(DynamicNFTLibrary.ConstructorArgs memory args)
+        ERC721("LegendDynamicNFT", "LDNFT")
+    {
+        _editionAmount = args.editionAmountValue;
+        _URIArray = args.URIArrayValue;
         _currentCounter = 0;
-        _deployerAddress = _deployerAddressValue;
+        _deployerAddress = args.deployerAddressValue;
 
-        _lensHubProxy = ILensHubProxy(_lensHubProxyAddress);
-        _legendAccessControl = LegendAccessControl(_legendAccessControlAddress);
-        _legendFactory = LegendFactory(_legendFactoryAddress);
+        _lensHubProxy = ILensHubProxy(args.lensHubProxyAddress);
+        _legendAccessControl = LegendAccessControl(
+            args.legendAccessControlAddress
+        );
+        _legendFactory = LegendFactory(args.legendFactoryAddress);
         _myBaseURI = _URIArray[0];
-        _grantName = _grantNameValue;
+        _grantName = args.grantNameValue;
+        _maxSupply = _editionAmount;
     }
 
     function safeMint(address _to) external onlyCollector {
@@ -203,5 +212,13 @@ contract LegendDynamicNFT is ERC721 {
 
     function getDeployerAddress() public view returns (address) {
         return _deployerAddress;
+    }
+
+    function getLegendKeeperAddress() public view returns (address) {
+        return address(_legendKeeper);
+    }
+
+    function getCollectNFTAddress() public view returns (address) {
+        return address(_collectNFT);
     }
 }

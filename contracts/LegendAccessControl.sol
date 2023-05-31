@@ -14,7 +14,7 @@ contract LegendAccessControl {
     modifier onlyAdmin() {
         require(
             admins[msg.sender],
-            "LegendAcessControl: Only admins can perform this action"
+            "LegendAccessControl: Only admins can perform this action"
         );
         _;
     }

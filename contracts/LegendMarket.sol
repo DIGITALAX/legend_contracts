@@ -115,65 +115,65 @@ contract LegendMarket {
         address _chosenTokenAddress,
         string memory _fulfillmentDetails
     ) external {
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            if (_legendNFT.getGrantCollectorsOnly(_tokenIds[i])) {
-                require(
-                    IDynamicNFT(_legendNFT.getDynamicNFTAddress(_tokenIds[i]))
-                        .getCollectorClaimedNFT(msg.sender),
-                    "LegendMarket: Must be authorized grant collector."
-                );
-            }
-        }
+        // for (uint256 i = 0; i < _tokenIds.length; i++) {
+        //     if (_legendNFT.getGrantCollectorsOnly(_tokenIds[i])) {
+        //         require(
+        //             IDynamicNFT(_legendNFT.getDynamicNFTAddress(_tokenIds[i]))
+        //                 .getCollectorClaimedNFT(msg.sender),
+        //             "LegendMarket: Must be authorized grant collector."
+        //         );
+        //     }
+        // }
 
         uint256 totalPrice = 0;
         uint256[] memory prices = new uint256[](_tokenIds.length);
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            require(
-                _legendNFT.ownerOf(_tokenIds[i]) == address(_legendEscrow),
-                "LegendMarket: Token must be owned by Escrow"
-            );
-            bool isAccepted = false;
-            address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
-                _tokenIds[i]
-            );
-            for (uint256 j = 0; j < acceptedTokens.length; j++) {
-                if (acceptedTokens[j] == _chosenTokenAddress) {
-                    isAccepted = true;
-                    break;
-                }
-            }
-            require(
-                isAccepted,
-                "LegendMarket: Chosen token address is not an accepted token for the collection"
-            );
+            // require(
+            //     _legendNFT.ownerOf(_tokenIds[i]) == address(_legendEscrow),
+            //     "LegendMarket: Token must be owned by Escrow"
+            // );
+            // bool isAccepted = false;
+            // address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
+            //     _tokenIds[i]
+            // );
+            // for (uint256 j = 0; j < acceptedTokens.length; j++) {
+            //     if (acceptedTokens[j] == _chosenTokenAddress) {
+            //         isAccepted = true;
+            //         break;
+            //     }
+            // }
+            // require(
+            //     isAccepted,
+            //     "LegendMarket: Chosen token address is not an accepted token for the collection"
+            // );
         }
 
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
-                _tokenIds[i]
-            );
-            for (uint256 j = 0; j < acceptedTokens.length; j++) {
-                if (acceptedTokens[j] == _chosenTokenAddress) {
-                    prices[i] = _legendNFT.getBasePrices(_tokenIds[i])[j];
+        // for (uint256 i = 0; i < _tokenIds.length; i++) {
+        //     address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
+        //         _tokenIds[i]
+        //     );
+        //     for (uint256 j = 0; j < acceptedTokens.length; j++) {
+        //         if (acceptedTokens[j] == _chosenTokenAddress) {
+        //             prices[i] = _legendNFT.getBasePrices(_tokenIds[i])[j];
 
-                    if (
-                        _legendNFT.getDiscount(_tokenIds[i]) != 0 &&
-                        IDynamicNFT(
-                            _legendNFT.getDynamicNFTAddress(_tokenIds[i])
-                        ).getCollectorClaimedNFT(msg.sender)
-                    ) {
-                        totalPrice +=
-                            prices[i] *
-                            _legendNFT.getDiscount(_tokenIds[i]);
-                    } else {
-                        totalPrice += prices[i];
-                    }
+        //             if (
+        //                 _legendNFT.getDiscount(_tokenIds[i]) != 0 &&
+        //                 IDynamicNFT(
+        //                     _legendNFT.getDynamicNFTAddress(_tokenIds[i])
+        //                 ).getCollectorClaimedNFT(msg.sender)
+        //             ) {
+        //                 totalPrice +=
+        //                     prices[i] *
+        //                     _legendNFT.getDiscount(_tokenIds[i]);
+        //             } else {
+        //                 totalPrice += prices[i];
+        //             }
 
-                    break;
-                }
-            }
-        }
+        //             break;
+        //         }
+        //     }
+        // }
 
         uint256 allowance = IERC20(_chosenTokenAddress).allowance(
             msg.sender,
@@ -185,47 +185,47 @@ contract LegendMarket {
             "LegendMarket: Insufficient Approval Allowance"
         );
 
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            uint256 _fulfillerId = _legendNFT.getFulfillerId(_tokenIds[i]);
-            IERC20(_chosenTokenAddress).transferFrom(
-                msg.sender,
-                _legendNFT.getTokenCreator(_tokenIds[i]),
-                prices[i] -
-                    prices[i] *
-                    _legendFulfillment.getFulfillerPercent(_fulfillerId)
-            );
-            IERC20(_chosenTokenAddress).transferFrom(
-                msg.sender,
-                _legendFulfillment.getFulfillerAddress(_fulfillerId),
-                prices[i] * _legendFulfillment.getFulfillerPercent(_fulfillerId)
-            );
-            _legendEscrow.release(_tokenIds[i], false, msg.sender);
+        // for (uint256 i = 0; i < _tokenIds.length; i++) {
+        //     uint256 _fulfillerId = _legendNFT.getFulfillerId(_tokenIds[i]);
+        //     IERC20(_chosenTokenAddress).transferFrom(
+        //         msg.sender,
+        //         _legendNFT.getTokenCreator(_tokenIds[i]),
+        //         prices[i] -
+        //             prices[i] *
+        //             _legendFulfillment.getFulfillerPercent(_fulfillerId)
+        //     );
+        //     IERC20(_chosenTokenAddress).transferFrom(
+        //         msg.sender,
+        //         _legendFulfillment.getFulfillerAddress(_fulfillerId),
+        //         prices[i] * _legendFulfillment.getFulfillerPercent(_fulfillerId)
+        //     );
+        //     _legendEscrow.release(_tokenIds[i], false, msg.sender);
 
-            _orderSupply++;
+        //     _orderSupply++;
 
-            Order memory newOrder = Order({
-                orderId: _orderSupply,
-                tokenId: _tokenIds[i],
-                details: _fulfillmentDetails,
-                buyer: msg.sender,
-                chosenAddress: _chosenTokenAddress,
-                timestamp: block.timestamp,
-                status: "ordered",
-                isFulfilled: false,
-                fulfillerId: _fulfillerId
-            });
+        //     Order memory newOrder = Order({
+        //         orderId: _orderSupply,
+        //         tokenId: _tokenIds[i],
+        //         details: _fulfillmentDetails,
+        //         buyer: msg.sender,
+        //         chosenAddress: _chosenTokenAddress,
+        //         timestamp: block.timestamp,
+        //         status: "ordered",
+        //         isFulfilled: false,
+        //         fulfillerId: _fulfillerId
+        //     });
 
-            _orders[_orderSupply] = newOrder;
+        //     _orders[_orderSupply] = newOrder;
 
-            emit OrderCreated(_orderSupply, msg.sender, _fulfillmentDetails);
-        }
+        //     emit OrderCreated(_orderSupply, msg.sender, _fulfillmentDetails);
+        // }
 
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            _tokensSold[_legendNFT.getTokenCollection(_tokenIds[i])] += 1;
-            _tokenIdsSold[_legendNFT.getTokenCollection(_tokenIds[i])].push(
-                _tokenIds[i]
-            );
-        }
+        // for (uint256 i = 0; i < _tokenIds.length; i++) {
+        //     _tokensSold[_legendNFT.getTokenCollection(_tokenIds[i])] += 1;
+        //     _tokenIdsSold[_legendNFT.getTokenCollection(_tokenIds[i])].push(
+        //         _tokenIds[i]
+        //     );
+        // }
 
         emit TokensBought(_tokenIds, msg.sender, _chosenTokenAddress);
     }
@@ -359,7 +359,6 @@ contract LegendMarket {
 
     function setOrderDetails(uint256 _orderId, string memory _newDetails)
         external
-        returns (bool)
     {
         require(
             _orders[_orderId].buyer == msg.sender,

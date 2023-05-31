@@ -57,11 +57,11 @@ contract LegendDrop {
 
     modifier onlyCreator(uint256[] memory _collectionIds) {
         for (uint256 i = 0; i < _collectionIds.length; i++) {
-            require(
-                _legendCollection.getCollectionCreator(_collectionIds[i]) ==
-                    msg.sender,
-                "LegendDrop: Only the owner of a collection can add it to a drop"
-            );
+            // require(
+            //     _legendCollection.getCollectionCreator(_collectionIds[i]) ==
+            //         msg.sender,
+            //     "LegendDrop: Only the owner of a collection can add it to a drop"
+            // );
             _;
         }
     }
@@ -91,18 +91,18 @@ contract LegendDrop {
         external
     {
         for (uint256 i = 0; i < _collectionIds.length; i++) {
-            require(
-                _legendCollection.getCollectionCreator(_collectionIds[i]) ==
-                    msg.sender &&
-                    (_accessControl.isWriter(msg.sender) ||
-                        _accessControl.isAdmin(msg.sender)),
-                "LegendDrop: Only the owner of a collection can add it to a drop"
-            );
-            require(
-                _collectionIds[i] != 0 &&
-                    _collectionIds[i] <= _legendCollection.collectionSupply(),
-                "LegendDrop: Collection does not exist"
-            );
+            // require(
+            //     _legendCollection.getCollectionCreator(_collectionIds[i]) ==
+            //         msg.sender &&
+            //         (_accessControl.isWriter(msg.sender) ||
+            //             _accessControl.isAdmin(msg.sender)),
+            //     "LegendDrop: Only the owner of a collection can add it to a drop"
+            // );
+            // require(
+            //     _collectionIds[i] != 0 &&
+            //         _collectionIds[i] <= _legendCollection.getCollectionSupply(),
+            //     "LegendDrop: Collection does not exist"
+            // );
             require(
                 _collectionIdToDrop[_collectionIds[i]] == 0,
                 "LegendDrop: Collection is already part of another existing drop"
@@ -119,13 +119,13 @@ contract LegendDrop {
             timestamp: block.timestamp
         });
 
-        for (uint256 i = 0; i < _collectionIds.length; i++) {
-            _collectionIdToDrop[_collectionIds[i]] = _dropSupply;
-            _legendCollection.setCollectionDropId(
-                _dropSupply,
-                _collectionIds[i]
-            );
-        }
+        // for (uint256 i = 0; i < _collectionIds.length; i++) {
+        //     _collectionIdToDrop[_collectionIds[i]] = _dropSupply;
+        //     _legendCollection.setCollectionDropId(
+        //         _dropSupply,
+        //         _collectionIds[i]
+        //     );
+        // }
 
         _drops[_dropSupply] = newDrop;
 
@@ -145,11 +145,11 @@ contract LegendDrop {
             );
         }
 
-        for (uint256 i; i < _collectionIds.length; i++) {
-            _drops[_dropId].collectionIds.push(_collectionIds[i]);
-            _collectionIdToDrop[_collectionIds[i]] = _dropSupply;
-            _legendCollection.setCollectionDropId(_dropId, _collectionIds[i]);
-        }
+        // for (uint256 i; i < _collectionIds.length; i++) {
+        //     _drops[_dropId].collectionIds.push(_collectionIds[i]);
+        //     _collectionIdToDrop[_collectionIds[i]] = _dropSupply;
+        //     _legendCollection.setCollectionDropId(_dropId, _collectionIds[i]);
+        // }
 
         emit CollectionAddedToDrop(_dropId, _collectionIds);
     }
@@ -159,12 +159,12 @@ contract LegendDrop {
             _drops[_collectionIdToDrop[_collectionId]].dropId != 0,
             "LegendDrop: Collection is not part of a drop"
         );
-        require(
-            _legendCollection.getCollectionCreator(_collectionId) ==
-                msg.sender ||
-                address(_legendCollection) == msg.sender,
-            "LegendDrop: Only creator or collection contract can remove collection"
-        );
+        // require(
+        //     _legendCollection.getCollectionCreator(_collectionId) ==
+        //         msg.sender ||
+        //         address(_legendCollection) == msg.sender,
+        //     "LegendDrop: Only creator or collection contract can remove collection"
+        // );
 
         uint256[] storage collectionIds = _drops[
             _collectionIdToDrop[_collectionId]
@@ -202,15 +202,15 @@ contract LegendDrop {
     function deleteDrop(uint256 _dropId) external {
         require(_drops[_dropId].dropId != 0, "LegendDrop: Drop does not exist");
         for (uint256 i = 0; i < _drops[_dropId].collectionIds.length; i++) {
-            require(
-                _legendCollection.getCollectionCreator(
-                    _drops[_dropId].collectionIds[i]
-                ) ==
-                    msg.sender &&
-                    (_accessControl.isWriter(msg.sender) ||
-                        _accessControl.isAdmin(msg.sender)),
-                "LegendDrop: Only the owner of a collection can add it to a drop"
-            );
+            // require(
+            //     _legendCollection.getCollectionCreator(
+            //         _drops[_dropId].collectionIds[i]
+            //     ) ==
+            //         msg.sender &&
+            //         (_accessControl.isWriter(msg.sender) ||
+            //             _accessControl.isAdmin(msg.sender)),
+            //     "LegendDrop: Only the owner of a collection can add it to a drop"
+            // );
         }
 
         uint256[] memory collectionIds = _drops[_dropId].collectionIds;
@@ -270,15 +270,15 @@ contract LegendDrop {
 
     function setDropURI(uint256 _dropId, string memory _dropURI) external {
         for (uint256 i = 0; i < _drops[_dropId].collectionIds.length; i++) {
-            require(
-                _legendCollection.getCollectionCreator(
-                    _drops[_dropId].collectionIds[i]
-                ) ==
-                    msg.sender &&
-                    (_accessControl.isWriter(msg.sender) ||
-                        _accessControl.isAdmin(msg.sender)),
-                "LegendDrop: Only the owner of a drop can edit a drop"
-            );
+            // require(
+            //     _legendCollection.getCollectionCreator(
+            //         _drops[_dropId].collectionIds[i]
+            //     ) ==
+            //         msg.sender &&
+            //         (_accessControl.isWriter(msg.sender) ||
+            //             _accessControl.isAdmin(msg.sender)),
+            //     "LegendDrop: Only the owner of a drop can edit a drop"
+            // );
         }
         _drops[_dropId].dropURI = _dropURI;
         emit DropURIUpdated(_dropId, _dropURI);

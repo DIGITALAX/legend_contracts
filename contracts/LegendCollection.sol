@@ -11,6 +11,7 @@ import "./LegendFactory.sol";
 
 interface IDynamicNFT {
     function getDeployerAddress() external view returns (address);
+
     function getCollectorClaimedNFT(address) external view returns (bool);
 }
 
@@ -18,7 +19,23 @@ interface ILegendKeeper {
     function getPostId() external view returns (uint256);
 }
 
+library MintParamsLibrary {
+    struct MintParams {
+        uint256 collectionId;
+        address creator;
+        address[] acceptedTokens;
+        uint256[] basePrices;
+        string uri;
+        string printType;
+        uint256 fulfillerId;
+        uint256 discount;
+        bool grantCollectorsOnly;
+    }
+}
+
 contract LegendCollection {
+    using MintParamsLibrary for MintParamsLibrary.MintParams;
+
     LegendNFT private _legendNFT;
     GlobalLegendAccessControl private _accessControl;
     LegendPayment private _legendPayment;
@@ -36,19 +53,19 @@ contract LegendCollection {
         uint256 amount;
         uint256 dropId;
         uint256 timestamp;
-        uint256 fulfillerId;
         address[] acceptedTokens;
         address creator;
-        address dynamicNFTAddress;
         string uri;
-        string printType;
         bool isBurned;
-        uint256 discount;
-        uint256 pubId;
-        bool grantCollectorsOnly;
     }
 
     mapping(uint256 => Collection) private _collections;
+    mapping(uint256 => uint256) private _fulfillerId;
+    mapping(uint256 => string) private _printType;
+    mapping(uint256 => uint256) private _discount;
+    mapping(uint256 => bool) private _grantCollectorsOnly;
+    mapping(uint256 => uint256) private _pubId;
+    mapping(uint256 => address) private _dynamicNFTAddress;
 
     event CollectionMinted(
         uint256 indexed collectionId,
@@ -121,8 +138,8 @@ contract LegendCollection {
 
     event CollectionFulfillerIdUpdated(
         uint256 indexed collectionId,
-        string oldFulfillerId,
-        string newFulfillerId,
+        uint256 oldFulfillerId,
+        uint256 newFulfillerId,
         address updater
     );
 
@@ -185,25 +202,19 @@ contract LegendCollection {
     }
 
     function mintCollection(
-        string memory _uri,
         uint256 _amount,
-        address[] memory _acceptedTokens,
-        uint256[] memory _basePrices,
-        string memory _printType,
-        uint256 _fulfillerId,
-        uint256 _discount,
-        bool _grantCollectorsOnly,
+        MintParamsLibrary.MintParams memory params,
         string memory _grantName
     ) external {
         // make sure only the grant publisher can mint for their grant
+        // require(
+        //     IDynamicNFT(
+        //         _legendFactory.getGrantContracts(msg.sender, _grantName)[2]
+        //     ).getDeployerAddress() == msg.sender,
+        //     "LegendCollection: Only grant publishers can make collections for their grants."
+        // );
         require(
-            IDynamicNFT(
-                _legendFactory.getGrantContracts(msg.sender, _grantName)[2]
-            ).getDeployerAddress() == msg.sender,
-            "LegendCollection: Only grant publishers can make collections for their grants."
-        );
-        require(
-            _basePrices.length == _acceptedTokens.length,
+            params.basePrices.length == params.acceptedTokens.length,
             "LegendCollection: Invalid input"
         );
         require(
@@ -211,9 +222,9 @@ contract LegendCollection {
                 _accessControl.isWriter(msg.sender),
             "LegendCollection: Only admin or writer can perform this action"
         );
-        for (uint256 i = 0; i < _acceptedTokens.length; i++) {
+        for (uint256 i = 0; i < params.acceptedTokens.length; i++) {
             require(
-                _legendPayment.checkIfAddressVerified(_acceptedTokens[i]),
+                _legendPayment.checkIfAddressVerified(params.acceptedTokens[i]),
                 "LegendCollection: Payment Token is Not Verified"
             );
         }
@@ -226,51 +237,87 @@ contract LegendCollection {
             tokenIds[i] = _legendNFT.getTotalSupplyCount() + i + 1;
         }
 
-        uint256 _pubId = ILegendKeeper(
+        uint256 _pubIdValue = ILegendKeeper(
             _legendFactory.getGrantContracts(msg.sender, _grantName)[0]
         ).getPostId();
-        address _dynamicNFTAddress = _legendFactory.getGrantContracts(
+        address _dynamicNFTAddressValue = _legendFactory.getGrantContracts(
             msg.sender,
             _grantName
         )[2];
 
+        _createNewCollection(params, _amount, tokenIds);
+
+        _setMappings(params, _pubIdValue, _dynamicNFTAddressValue);
+
+        _mintNFT(params, _pubIdValue, _amount, _dynamicNFTAddressValue);
+
+        emit CollectionMinted(
+            _collectionSupply,
+            params.uri,
+            _amount,
+            msg.sender
+        );
+    }
+
+    function _setMappings(
+        MintParamsLibrary.MintParams memory params,
+        uint256 _pubIdValue,
+        address _dynamicNFTAddressValue
+    ) private {
+        _printType[_collectionSupply] = params.printType;
+        _fulfillerId[_collectionSupply] = params.fulfillerId;
+        _discount[_collectionSupply] = params.discount;
+        _grantCollectorsOnly[_collectionSupply] = params.grantCollectorsOnly;
+        _pubId[_collectionSupply] = _pubIdValue;
+        _dynamicNFTAddress[_collectionSupply] = _dynamicNFTAddressValue;
+    }
+
+    function _createNewCollection(
+        MintParamsLibrary.MintParams memory params,
+        uint256 _amount,
+        uint256[] memory tokenIds
+    ) private {
         Collection memory newCollection = Collection({
             collectionId: _collectionSupply,
-            acceptedTokens: _acceptedTokens,
-            basePrices: _basePrices,
+            acceptedTokens: params.acceptedTokens,
+            basePrices: params.basePrices,
             tokenIds: tokenIds,
             amount: _amount,
             creator: msg.sender,
-            uri: _uri,
+            uri: params.uri,
             isBurned: false,
             timestamp: block.timestamp,
-            printType: _printType,
-            fulfillerId: _fulfillerId,
-            dropId: 0,
-            discount: _discount,
-            grantCollectorsOnly: _grantCollectorsOnly,
-            pubId: _pubId,
-            dynamicNFTAddress: _dynamicNFTAddress
+            dropId: 0
         });
 
         _collections[_collectionSupply] = newCollection;
+    }
+
+    function _mintNFT(
+        MintParamsLibrary.MintParams memory params,
+        uint256 _pubIdValue,
+        uint256 _amount,
+        address _dynamicNFTAddressValue
+    ) private {
+        MintParamsLibrary.MintParams memory paramsNFT = MintParamsLibrary
+            .MintParams({
+                collectionId: _collectionSupply,
+                creator: msg.sender,
+                acceptedTokens: params.acceptedTokens,
+                basePrices: params.basePrices,
+                uri: params.uri,
+                printType: params.printType,
+                fulfillerId: params.fulfillerId,
+                discount: params.discount,
+                grantCollectorsOnly: params.grantCollectorsOnly
+            });
 
         _legendNFT.mintBatch(
-            _uri,
+            paramsNFT,
             _amount,
-            _collectionSupply,
-            msg.sender,
-            _acceptedTokens,
-            _basePrices,
-            _printType,
-            _fulfillerId,
-            _discount,
-            _grantCollectorsOnly,
-            _pubId,
-            _dynamicNFTAddress
+            _pubIdValue,
+            _dynamicNFTAddressValue
         );
-
-        emit CollectionMinted(_collectionSupply, _uri, _amount, msg.sender);
     }
 
     function burnCollection(uint256 _collectionId)
@@ -434,7 +481,7 @@ contract LegendCollection {
         view
         returns (uint256)
     {
-        return _collections[_collectionId].fulfillerId;
+        return _fulfillerId[_collectionId];
     }
 
     function getCollectionPrintType(uint256 _collectionId)
@@ -442,7 +489,7 @@ contract LegendCollection {
         view
         returns (string memory)
     {
-        return _collections[_collectionId].printType;
+        return _printType[_collectionId];
     }
 
     function getCollectionTokenIds(uint256 _collectionId)
@@ -458,7 +505,7 @@ contract LegendCollection {
         view
         returns (uint256)
     {
-        return _collections[_collectionId].discount;
+        return _discount[_collectionId];
     }
 
     function getDynamicNFTAddress(uint256 _collectionId)
@@ -466,11 +513,11 @@ contract LegendCollection {
         view
         returns (address)
     {
-        return _collections[_collectionId].dynamicNFTAddress;
+        return _dynamicNFTAddress[_collectionId];
     }
 
     function getPubId(uint256 _collectionId) public view returns (uint256) {
-        return _collections[_collectionId].pubId;
+        return _pubId[_collectionId];
     }
 
     function getCollectionGrantCollectorsOnly(uint256 _collectionId)
@@ -478,7 +525,7 @@ contract LegendCollection {
         view
         returns (bool)
     {
-        return _collections[_collectionId].grantCollectorsOnly;
+        return _grantCollectorsOnly[_collectionId];
     }
 
     function setCollectionPrintType(
@@ -493,8 +540,8 @@ contract LegendCollection {
             );
             _legendNFT.setPrintType(tokenIds[i], _newPrintType);
         }
-        string memory oldPrintType = _collections[_collectionId].printType;
-        _collections[_collectionId].printType = _newPrintType;
+        string memory oldPrintType = _printType[_collectionId];
+        _printType[_collectionId] = _newPrintType;
         emit CollectionPrintTypeUpdated(
             _collectionId,
             oldPrintType,
@@ -513,10 +560,10 @@ contract LegendCollection {
                 _legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow),
                 "LegendCollection: The entire collection must be owned by Escrow to update"
             );
-            _legendNFT.setFufillerId(tokenIds[i], _newFulfillerId);
+            _legendNFT.setFulfillerId(tokenIds[i], _newFulfillerId);
         }
-        string memory oldFufillerId = _collections[_collectionId].fulfillerId;
-        _collections[_collectionId].fulfillerId = _newFulfillerId;
+        uint256 oldFufillerId = _fulfillerId[_collectionId];
+        _fulfillerId[_collectionId] = _newFulfillerId;
         emit CollectionFulfillerIdUpdated(
             _collectionId,
             oldFufillerId,
@@ -550,16 +597,16 @@ contract LegendCollection {
         emit CollectionDropIdUpdated(_collectionId, _dropId, msg.sender);
     }
 
-    function setCollectionDiscount(uint256 _discount, uint256 _collectionId)
+    function setCollectionDiscount(uint256 _newDiscount, uint256 _collectionId)
         external
         onlyCreator(_collectionId)
     {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            _legendNFT.setDiscount(tokenIds[i], _discount);
+            _legendNFT.setDiscount(tokenIds[i], _newDiscount);
         }
-        _collections[_collectionId].discount = _discount;
-        emit CollectionDiscountUpdated(_collectionId, _discount, msg.sender);
+        _discount[_collectionId] = _newDiscount;
+        emit CollectionDiscountUpdated(_collectionId, _newDiscount, msg.sender);
     }
 
     function setCollectionGrantCollectorsOnly(
@@ -570,7 +617,7 @@ contract LegendCollection {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             _legendNFT.setGrantCollectorsOnly(tokenIds[i], _collectorsOnly);
         }
-        _collections[_collectionId].grantCollectorsOnly = _collectorsOnly;
+        _grantCollectorsOnly[_collectionId] = _collectorsOnly;
         emit CollectionGrantCollectorsOnlyUpdated(
             _collectionId,
             _collectorsOnly,

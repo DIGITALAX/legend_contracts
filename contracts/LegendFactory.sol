@@ -57,37 +57,25 @@ contract LegendFactory {
     }
 
     function createContracts(
-        uint256 _editionAmountValue,
         uint256 _pubId,
-        address _lensHubProxyAddress,
-        string[] memory _URIArrayValue,
-        string memory _name,
-        address _externalOwner
+        DynamicNFTLibrary.ConstructorArgs memory args
     ) public {
         uint256 blockTimestamp = block.timestamp;
         // Deploy LegendAccessControl
         LegendAccessControl newLegendAccessControl = new LegendAccessControl(
             "Legend AccessControl",
             "LAC",
-            _externalOwner
+            args.deployerAddressValue
         );
 
         // Deploy LegendDynamicNFT
-        LegendDynamicNFT newLegendDynamicNFT = new LegendDynamicNFT(
-            address(newLegendAccessControl),
-            _lensHubProxyAddress,
-            address(this),
-            _externalOwner,
-            _URIArrayValue,
-            _name,
-            _editionAmountValue
-        );
+        LegendDynamicNFT newLegendDynamicNFT = new LegendDynamicNFT(args);
 
         // Deploy LegendKeeper
         LegendKeeper newLegendKeeper = new LegendKeeper(
-            _editionAmountValue,
+            args.editionAmountValue,
             _pubId,
-            _lensHubProxyAddress,
+            args.lensHubProxyAddress,
             address(newLegendDynamicNFT),
             address(newLegendAccessControl),
             "Legend Keeper",
@@ -97,17 +85,17 @@ contract LegendFactory {
         // Set LegendKeeper in LegendDynamicNFT contract
         newLegendDynamicNFT.setLegendKeeperContract(address(newLegendKeeper));
 
-        _deployerToContracts[_externalOwner][blockTimestamp].push(
+        _deployerToContracts[args.deployerAddressValue][blockTimestamp].push(
             address(newLegendKeeper)
         );
-        _deployerToContracts[_externalOwner][blockTimestamp].push(
+        _deployerToContracts[args.deployerAddressValue][blockTimestamp].push(
             address(newLegendAccessControl)
         );
-        _deployerToContracts[_externalOwner][blockTimestamp].push(
+        _deployerToContracts[args.deployerAddressValue][blockTimestamp].push(
             address(newLegendDynamicNFT)
         );
 
-        _accessControl.addWriter(_externalOwner);
+        _accessControl.addWriter(args.deployerAddressValue);
 
         Grant memory grantDetails = Grant(
             [
@@ -115,18 +103,22 @@ contract LegendFactory {
                 address(newLegendAccessControl),
                 address(newLegendDynamicNFT)
             ],
-            _name,
+            args.grantNameValue,
             block.timestamp,
             "live"
         );
 
-        _deployerToGrant[_externalOwner][_name] = grantDetails;
+        _deployerToGrant[args.deployerAddressValue][
+            args.grantNameValue
+        ] = grantDetails;
 
-        _deployedLegendKeepers[_externalOwner] = address(newLegendKeeper);
-        _deployedLegendDynamicNFTs[_externalOwner] = address(
+        _deployedLegendKeepers[args.deployerAddressValue] = address(
+            newLegendKeeper
+        );
+        _deployedLegendDynamicNFTs[args.deployerAddressValue] = address(
             newLegendDynamicNFT
         );
-        _deployedLegendAccessControls[_externalOwner] = address(
+        _deployedLegendAccessControls[args.deployerAddressValue] = address(
             newLegendAccessControl
         );
 
@@ -134,8 +126,8 @@ contract LegendFactory {
             address(newLegendKeeper),
             address(newLegendAccessControl),
             address(newLegendDynamicNFT),
-            _name,
-            _externalOwner,
+            args.grantNameValue,
+            args.deployerAddressValue,
             block.timestamp
         );
     }
