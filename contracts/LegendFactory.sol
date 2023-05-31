@@ -8,6 +8,8 @@ import "./GlobalLegendAccessControl.sol";
 
 contract LegendFactory {
     GlobalLegendAccessControl private _accessControl;
+    string public name;
+    string public symbol;
 
     struct Grant {
         address[3] contracts;
@@ -56,6 +58,16 @@ contract LegendFactory {
         _;
     }
 
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        address _accessControlsAddress
+    ) {
+        name = _name;
+        symbol = _symbol;
+        _accessControl = GlobalLegendAccessControl(_accessControlsAddress);
+    }
+
     function createContracts(
         uint256 _pubId,
         DynamicNFTLibrary.ConstructorArgs memory args
@@ -81,9 +93,6 @@ contract LegendFactory {
             "Legend Keeper",
             "LKEEP"
         );
-
-        // Set LegendKeeper in LegendDynamicNFT contract
-        newLegendDynamicNFT.setLegendKeeperContract(address(newLegendKeeper));
 
         _deployerToContracts[args.deployerAddressValue][blockTimestamp].push(
             address(newLegendKeeper)

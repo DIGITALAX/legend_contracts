@@ -96,7 +96,7 @@ contract LegendNFT is ERC721Enumerable {
     modifier onlyAdmin() {
         require(
             _accessControl.isAdmin(msg.sender),
-            "AccessControl: Only admin can perform this action"
+            "GlobalLegendAccessControl: Only admin can perform this action"
         );
         _;
     }

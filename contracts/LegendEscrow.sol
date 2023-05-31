@@ -81,20 +81,20 @@ contract LegendEscrow is ERC721Holder {
             "LegendEscrow: Only the Legend Marketplace contract can call this function"
         );
         if (_isBurn) {
-            // require(
-            //     _legendNFT.getTokenCreator(_tokenId) == msg.sender ||
-            //         address(_legendCollection) == msg.sender,
-            //     "LegendEscrow: Only the creator of the token can transfer it to the burn address"
-            // );
+            require(
+                _legendNFT.getTokenCreator(_tokenId) == msg.sender ||
+                    address(_legendCollection) == msg.sender,
+                "LegendEscrow: Only the creator of the token can transfer it to the burn address"
+            );
         }
         _;
     }
 
     function deposit(uint256 _tokenId, bool _bool) external onlyDepositer {
-        // require(
-        //     _legendNFT.ownerOf(_tokenId) == address(this),
-        //     "LegendEscrow: Token must be owned by escrow contract or Owner"
-        // );
+        require(
+            _legendNFT.ownerOf(_tokenId) == address(this),
+            "LegendEscrow: Token must be owned by escrow contract or Owner"
+        );
         _deposited[_tokenId] = _bool;
     }
 
@@ -105,11 +105,11 @@ contract LegendEscrow is ERC721Holder {
     ) external onlyReleaser(_isBurn, _tokenId) {
         require(_deposited[_tokenId], "LegendEscrow: Token must be in escrow");
         _deposited[_tokenId] = false;
-        // if (_isBurn) {
-        //     _legendNFT.burn(_tokenId);
-        // } else {
-        //     _legendNFT.safeTransferFrom(address(this), _to, _tokenId);
-        // }
+        if (_isBurn) {
+            _legendNFT.burn(_tokenId);
+        } else {
+            _legendNFT.safeTransferFrom(address(this), _to, _tokenId);
+        }
     }
 
     function updateLegendMarketplace(address _newLegendMarketplace)

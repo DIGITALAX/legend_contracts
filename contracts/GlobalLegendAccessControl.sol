@@ -15,14 +15,14 @@ contract GlobalLegendAccessControl {
     event WriterRemoved(address indexed writer);
 
     modifier onlyAdmin() {
-        require(admins[msg.sender], "Only admins can perform this action");
+        require(admins[msg.sender], "GlobalLegendAccessControl: Only admin can perform this action");
         _;
     }
 
     modifier onlyWrite() {
         require(
             writers[msg.sender],
-            "Only authorized writers can perform this action"
+            "GlobalLegendAccessControl: Only authorized writers can perform this action"
         );
         _;
     }
@@ -36,14 +36,14 @@ contract GlobalLegendAccessControl {
     function addAdmin(address _admin) external onlyAdmin {
         require(
             !admins[_admin] && _admin != msg.sender,
-            "Cannot add existing admin or yourself"
+            "GlobalLegendAccessControl: Cannot add existing admin or yourself"
         );
         admins[_admin] = true;
         emit AdminAdded(_admin);
     }
 
     function removeAdmin(address _admin) external onlyAdmin {
-        require(_admin != msg.sender, "Cannot remove yourself as admin");
+        require(_admin != msg.sender, "GlobalLegendAccessControl: Cannot remove yourself as admin");
         admins[_admin] = false;
         emit AdminRemoved(_admin);
     }
