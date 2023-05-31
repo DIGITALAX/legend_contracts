@@ -34,7 +34,6 @@ contract LegendKeeper is AutomationCompatibleInterface {
     ICollectNFT private _collectNFT;
     ILensHubProxy private _lensHubProxy;
     LegendDynamicNFT private _legendDynamicNFT;
-
     LegendAccessControl private _legendAccessControl;
 
     modifier onlyAdmin() {
@@ -48,24 +47,27 @@ contract LegendKeeper is AutomationCompatibleInterface {
     constructor(
         uint256 _editionAmountValue,
         uint256 _pubIdValue,
+        uint256 _profileIdValue,
         address _lensHubProxyAddress,
         address _legendDynamicNFTAddress,
-        address _legendAccessControlAddress,
+        address _accessControlAddress,
+        address _deployerAddressValue,
         string memory _name,
         string memory _symbol
     ) {
         _editionAmount = _editionAmountValue;
         _totalAmountOfCollects = 0;
         _currentCollects = 0;
-        _deployerAddress = msg.sender;
+        _deployerAddress = _deployerAddressValue;
 
         _lensHubProxy = ILensHubProxy(_lensHubProxyAddress);
         _legendDynamicNFT = LegendDynamicNFT(_legendDynamicNFTAddress);
-        _legendAccessControl = LegendAccessControl(_legendAccessControlAddress);
+        _legendAccessControl = LegendAccessControl(_accessControlAddress);
 
         symbol = _symbol;
         name = _name;
         _pubId = _pubIdValue;
+        _profileId = _profileIdValue;
     }
 
     function checkUpkeep(
@@ -93,14 +95,7 @@ contract LegendKeeper is AutomationCompatibleInterface {
     }
 
     function _returnValues() private {
-        if (_profileId == 0) {
-            uint256 _profileIdValue = _lensHubProxy.defaultProfile(
-                _deployerAddress
-            );
-            _setProfileId(_profileIdValue);
-        }
-
-        if (_pubId != 0 && address(_collectNFT) == address(0)) {
+        if (address(_collectNFT) == address(0)) {
             address collectNFTAddress = _lensHubProxy.getCollectNFT(
                 _profileId,
                 _pubId
@@ -118,11 +113,6 @@ contract LegendKeeper is AutomationCompatibleInterface {
     function _setCollectNFTAddress(address _collectNFTAddress) private {
         require(address(_collectNFT) == address(0));
         _collectNFT = ICollectNFT(_collectNFTAddress);
-    }
-
-    function _setProfileId(uint256 _profileIdValue) private {
-        require(_profileId == 0, "LegendKeeper: ProfileId already set.");
-        _profileId = _profileIdValue;
     }
 
     function setKeeperId(uint256 _keeperIdValue) public onlyAdmin {
@@ -160,5 +150,13 @@ contract LegendKeeper is AutomationCompatibleInterface {
 
     function getCurrentCollects() public view returns (uint256) {
         return _currentCollects;
+    }
+
+    function getDynamicNFTAddress() public view returns (address) {
+        return address(_legendDynamicNFT);
+    }
+
+    function getAccessControlAddress() public view returns (address) {
+        return address(_legendAccessControl);
     }
 }

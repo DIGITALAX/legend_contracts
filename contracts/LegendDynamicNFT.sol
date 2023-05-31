@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "./LegendKeeper.sol";
 import "./LegendAccessControl.sol";
 import "./LegendFactory.sol";
+import "./GlobalLegendAccessControl.sol";
 
 library DynamicNFTLibrary {
     struct ConstructorArgs {
-        address legendAccessControlAddress;
         address lensHubProxyAddress;
         address legendFactoryAddress;
         address deployerAddressValue;
@@ -48,6 +48,14 @@ contract LegendDynamicNFT is ERC721 {
         address updater
     );
 
+    modifier onlyFactory() {
+        require(
+            msg.sender == address(_legendFactory),
+            "LegendDynamicNFT: Only the factory can set the keeper address"
+        );
+        _;
+    }
+
     modifier onlyAdmin() {
         require(
             _legendAccessControl.isAdmin(msg.sender),
@@ -72,19 +80,18 @@ contract LegendDynamicNFT is ERC721 {
         _;
     }
 
-    constructor(DynamicNFTLibrary.ConstructorArgs memory args)
-        ERC721("LegendDynamicNFT", "LDNFT")
-    {
+    constructor(
+        DynamicNFTLibrary.ConstructorArgs memory args,
+        address _legendAccessControlValue,
+        address _legendFactoryValue
+    ) ERC721("LegendDynamicNFT", "LDNFT") {
         _editionAmount = args.editionAmountValue;
         _URIArray = args.URIArrayValue;
         _currentCounter = 0;
         _deployerAddress = args.deployerAddressValue;
-
+        _legendAccessControl = LegendAccessControl(_legendAccessControlValue);
+        _legendFactory = LegendFactory(_legendFactoryValue);
         _lensHubProxy = ILensHubProxy(args.lensHubProxyAddress);
-        _legendAccessControl = LegendAccessControl(
-            args.legendAccessControlAddress
-        );
-        _legendFactory = LegendFactory(args.legendFactoryAddress);
         _myBaseURI = _URIArray[0];
         _grantName = args.grantNameValue;
         _maxSupply = _editionAmount;
@@ -159,11 +166,11 @@ contract LegendDynamicNFT is ERC721 {
         return super.supportsInterface(_interfaceId);
     }
 
-    function setLegendKeeperContract(address _legendKeeperContract)
-        public
-        onlyAdmin
+    function setLegendKeeperAddress(address _legendKeeperAddress)
+        external
+        onlyFactory
     {
-        _legendKeeper = LegendKeeper(_legendKeeperContract);
+        _legendKeeper = LegendKeeper(_legendKeeperAddress);
     }
 
     function setCollectNFTAddress(address _collectNFTAddress)
@@ -216,6 +223,10 @@ contract LegendDynamicNFT is ERC721 {
 
     function getLegendKeeperAddress() public view returns (address) {
         return address(_legendKeeper);
+    }
+
+    function getLegendAccessControlAddress() public view returns (address) {
+        return address(_legendAccessControl);
     }
 
     function getCollectNFTAddress() public view returns (address) {

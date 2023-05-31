@@ -1,7 +1,7 @@
 // test/LegendDynamicNFT.spec.ts
 
 import { ethers } from "hardhat";
-import { Contract, Signer, constants } from "ethers";
+import { Contract } from "ethers";
 import { solidity } from "ethereum-waffle";
 import chai from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -36,6 +36,7 @@ describe("LegendDynamicNFT", function () {
   const grantName = "TestGrant";
   const editionAmount = 100;
   const pubId = 8199;
+  const profileId = 81992;
 
   beforeEach(async () => {
     [admin, deployer, writer] = await ethers.getSigners();
@@ -57,12 +58,6 @@ describe("LegendDynamicNFT", function () {
       "GLAC"
     );
 
-    legendAccessControl = await LegendAccessControl.deploy(
-      "LegendAccessControl",
-      "LAC",
-      deployer.address
-    );
-
     legendFactory = await LegendFactory.deploy(
       "LegendFactory",
       "LFAC",
@@ -72,8 +67,7 @@ describe("LegendDynamicNFT", function () {
     globalLegendAccessControl.addAdmin(legendFactory.address);
 
     const myStruct = {
-      legendAccessControlAddress: legendAccessControl.address,
-      lensHubProxyAddress: legendAccessControl.address,
+      lensHubProxyAddress: legendFactory.address,
       legendFactoryAddress: legendFactory.address,
       deployerAddressValue: deployer.address,
       URIArrayValue: URIArray,
@@ -81,7 +75,7 @@ describe("LegendDynamicNFT", function () {
       editionAmountValue: editionAmount,
     };
 
-    const tx = await legendFactory.createContracts(pubId, myStruct);
+    const tx = await legendFactory.createContracts(pubId, profileId, myStruct);
     const receipt = await tx.wait();
 
     const event = receipt.events.find(
@@ -90,14 +84,11 @@ describe("LegendDynamicNFT", function () {
 
     const eventData = await event.args;
 
-    legendDynamicNFT = LegendDynamicNFT.attach(
-      eventData.dynamicNFTAddress
-    );
+    legendDynamicNFT = LegendDynamicNFT.attach(eventData.dynamicNFTAddress);
     legendKeeper = LegendKeeper.attach(eventData.keeperAddress);
-
-    legendDynamicNFT
-      .connect(deployer)
-      .setLegendKeeperContract(legendKeeper.address);
+    legendAccessControl = LegendAccessControl.attach(
+      eventData.accessControlAddress
+    );
   });
 
   describe("deployment", async () => {
@@ -126,41 +117,16 @@ describe("LegendDynamicNFT", function () {
     it("should set the current counter to 0", async () => {
       expect(await legendDynamicNFT.getCurrentCounter()).to.equal(0);
     });
-  });
 
-  describe("setLegendKeeperContract", async () => {
-    it("should not allow non-admin to set keeper contract", async () => {
-      await expect(
-        legendDynamicNFT
-          .connect(admin)
-          .setLegendKeeperContract(legendKeeper.address)
-      ).to.be.revertedWith(
-        "LegendAccessControl: Only admin can perform this action"
-      );
-    });
-
-    it("should only allow admin to set keeper contract", async () => {
+    it("should set the keeper address", async () => {
       expect(await legendDynamicNFT.getLegendKeeperAddress()).to.equal(
         legendKeeper.address
       );
+    });
 
-      const LegendKeeper = await ethers.getContractFactory("LegendKeeper");
-
-      const newLegendKeeper = await LegendKeeper.deploy(
-        editionAmount,
-        pubId,
-        legendDynamicNFT.address,
-        legendDynamicNFT.address,
-        legendAccessControl.address,
-        "LegendKeeper",
-        "LKEEP"
-      );
-      await legendDynamicNFT
-        .connect(deployer)
-        .setLegendKeeperContract(newLegendKeeper.address);
-
-      expect(await legendDynamicNFT.getLegendKeeperAddress()).to.equal(
-        newLegendKeeper.address
+    it("should set the access control address", async () => {
+      expect(await legendDynamicNFT.getLegendAccessControlAddress()).to.equal(
+        legendAccessControl.address
       );
     });
   });

@@ -70,6 +70,7 @@ contract LegendFactory {
 
     function createContracts(
         uint256 _pubId,
+        uint256 _profileId,
         DynamicNFTLibrary.ConstructorArgs memory args
     ) public {
         uint256 blockTimestamp = block.timestamp;
@@ -81,18 +82,26 @@ contract LegendFactory {
         );
 
         // Deploy LegendDynamicNFT
-        LegendDynamicNFT newLegendDynamicNFT = new LegendDynamicNFT(args);
+        LegendDynamicNFT newLegendDynamicNFT = new LegendDynamicNFT(
+            args,
+            address(newLegendAccessControl),
+            address(this)
+        );
 
         // Deploy LegendKeeper
         LegendKeeper newLegendKeeper = new LegendKeeper(
             args.editionAmountValue,
             _pubId,
+            _profileId,
             args.lensHubProxyAddress,
             address(newLegendDynamicNFT),
             address(newLegendAccessControl),
+            args.deployerAddressValue,
             "Legend Keeper",
             "LKEEP"
         );
+
+        newLegendDynamicNFT.setLegendKeeperAddress(address(newLegendKeeper));
 
         _deployerToContracts[args.deployerAddressValue][blockTimestamp].push(
             address(newLegendKeeper)
