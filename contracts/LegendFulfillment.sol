@@ -54,6 +54,12 @@ contract LegendFulfillment {
         address newFulfillerAddress
     );
 
+    event FulfillerCreated(
+        uint256 indexed fulfillerId,
+        uint256 fulfillerPercent,
+        address fulfillerAddress
+    );
+
     event FulfillerPercentUpdated(
         uint256 indexed fulfillerId,
         uint256 newFulfillerPercent
@@ -95,6 +101,12 @@ contract LegendFulfillment {
         });
 
         _fulfillers[_fullfillerCount] = newFulfiller;
+
+        emit FulfillerCreated(
+            _fullfillerCount,
+            _fulfillerPercent,
+            _fulfillerAddress
+        );
     }
 
     function updateLegendNFT(address _newLegendNFTAddress) external onlyAdmin {

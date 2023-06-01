@@ -126,12 +126,14 @@ contract LegendNFT is ERC721Enumerable {
         MintParamsLibrary.MintParams memory params,
         uint256 _amount,
         uint256 _pubIdValue,
-        address _dynamicNFTAddressValue
+        uint256 _collectionId,
+        address _dynamicNFTAddressValue,
+        address _creatorAddress
     ) public onlyCollectionContract {
         uint256[] memory tokenIds = new uint256[](_amount);
         for (uint256 i = 0; i < _amount; i++) {
             _totalSupplyCount += 1;
-            _mintToken(params);
+            _mintToken(params, _collectionId, _creatorAddress);
             _setMappings(params, _pubIdValue, _dynamicNFTAddressValue);
 
             tokenIds[i] = _totalSupplyCount;
@@ -155,13 +157,17 @@ contract LegendNFT is ERC721Enumerable {
         _dynamicNFTAddress[_totalSupplyCount] = _dynamicNFTAddressValue;
     }
 
-    function _mintToken(MintParamsLibrary.MintParams memory params) private {
+    function _mintToken(
+        MintParamsLibrary.MintParams memory params,
+        uint256 _collectionId,
+        address _creatorAddress
+    ) private {
         Token memory newToken = Token({
             tokenId: _totalSupplyCount,
-            collectionId: params.collectionId,
+            collectionId: _collectionId,
             acceptedTokens: params.acceptedTokens,
             basePrices: params.basePrices,
-            creator: params.creator,
+            creator: _creatorAddress,
             uri: params.uri,
             isBurned: false,
             timestamp: block.timestamp

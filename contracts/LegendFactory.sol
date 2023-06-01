@@ -79,7 +79,6 @@ contract LegendFactory {
         uint256 _profileId,
         DynamicNFTLibrary.ConstructorArgs memory args
     ) public {
-        uint256 blockTimestamp = block.timestamp;
         // Deploy LegendAccessControl
         LegendAccessControl newLegendAccessControl = new LegendAccessControl(
             "Legend AccessControl",

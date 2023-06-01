@@ -8,6 +8,7 @@ import "./LegendPayment.sol";
 import "./LegendEscrow.sol";
 import "./LegendDrop.sol";
 import "./LegendFactory.sol";
+import "./LegendFulfillment.sol";
 
 interface IDynamicNFT {
     function getDeployerAddress() external view returns (address);
@@ -21,8 +22,6 @@ interface ILegendKeeper {
 
 library MintParamsLibrary {
     struct MintParams {
-        uint256 collectionId;
-        address creator;
         address[] acceptedTokens;
         uint256[] basePrices;
         string uri;
@@ -37,6 +36,7 @@ contract LegendCollection {
     using MintParamsLibrary for MintParamsLibrary.MintParams;
 
     LegendNFT private _legendNFT;
+    LegendFulfillment private _legendFulfillment;
     GlobalLegendAccessControl private _accessControl;
     LegendPayment private _legendPayment;
     LegendEscrow private _legendEscrow;
@@ -112,6 +112,12 @@ contract LegendCollection {
         address updater
     );
 
+    event LegendFulfillmentUpdated(
+        address indexed oldLegendFulfillment,
+        address indexed newLegendFulfillment,
+        address updater
+    );
+
     event LegendPaymentUpdated(
         address indexed oldLegendPayment,
         address indexed newLegendPayment,
@@ -184,6 +190,28 @@ contract LegendCollection {
         _;
     }
 
+    modifier onlyGrantPublishers(
+        address _functionCallerAddress,
+        string memory _grantName
+    ) {
+        require(
+            _legendFactory.getGrantContracts(
+                _functionCallerAddress,
+                _grantName
+            )[2] !=
+                address(0) &&
+                IDynamicNFT(
+                    _legendFactory.getGrantContracts(
+                        _functionCallerAddress,
+                        _grantName
+                    )[2]
+                ).getDeployerAddress() ==
+                _functionCallerAddress,
+            "LegendCollection: Only grant publishers can make collections for their grants."
+        );
+        _;
+    }
+
     constructor(
         address _legendNFTAddress,
         address _accessControlAddress,
@@ -205,14 +233,7 @@ contract LegendCollection {
         uint256 _amount,
         MintParamsLibrary.MintParams memory params,
         string memory _grantName
-    ) external {
-        // make sure only the grant publisher can mint for their grant
-        // require(
-        //     IDynamicNFT(
-        //         _legendFactory.getGrantContracts(msg.sender, _grantName)[2]
-        //     ).getDeployerAddress() == msg.sender,
-        //     "LegendCollection: Only grant publishers can make collections for their grants."
-        // );
+    ) external onlyGrantPublishers(msg.sender, _grantName) {
         require(
             params.basePrices.length == params.acceptedTokens.length,
             "LegendCollection: Invalid input"
@@ -221,6 +242,11 @@ contract LegendCollection {
             _accessControl.isAdmin(msg.sender) ||
                 _accessControl.isWriter(msg.sender),
             "LegendCollection: Only admin or writer can perform this action"
+        );
+        require(
+            _legendFulfillment.getFulfillerAddress(params.fulfillerId) !=
+                address(0),
+            "LegendFulfillment: FulfillerId does not exist."
         );
         for (uint256 i = 0; i < params.acceptedTokens.length; i++) {
             require(
@@ -245,11 +271,17 @@ contract LegendCollection {
             _grantName
         )[2];
 
-        _createNewCollection(params, _amount, tokenIds);
+        _createNewCollection(params, _amount, tokenIds, msg.sender);
 
         _setMappings(params, _pubIdValue, _dynamicNFTAddressValue);
 
-        _mintNFT(params, _pubIdValue, _amount, _dynamicNFTAddressValue);
+        _mintNFT(
+            params,
+            _pubIdValue,
+            _amount,
+            _dynamicNFTAddressValue,
+            msg.sender
+        );
 
         emit CollectionMinted(
             _collectionSupply,
@@ -275,7 +307,8 @@ contract LegendCollection {
     function _createNewCollection(
         MintParamsLibrary.MintParams memory params,
         uint256 _amount,
-        uint256[] memory tokenIds
+        uint256[] memory tokenIds,
+        address _creatorAddress
     ) private {
         Collection memory newCollection = Collection({
             collectionId: _collectionSupply,
@@ -283,7 +316,7 @@ contract LegendCollection {
             basePrices: params.basePrices,
             tokenIds: tokenIds,
             amount: _amount,
-            creator: msg.sender,
+            creator: _creatorAddress,
             uri: params.uri,
             isBurned: false,
             timestamp: block.timestamp,
@@ -297,12 +330,11 @@ contract LegendCollection {
         MintParamsLibrary.MintParams memory params,
         uint256 _pubIdValue,
         uint256 _amount,
-        address _dynamicNFTAddressValue
+        address _dynamicNFTAddressValue,
+        address _creatorAddress
     ) private {
         MintParamsLibrary.MintParams memory paramsNFT = MintParamsLibrary
             .MintParams({
-                collectionId: _collectionSupply,
-                creator: msg.sender,
                 acceptedTokens: params.acceptedTokens,
                 basePrices: params.basePrices,
                 uri: params.uri,
@@ -316,7 +348,9 @@ contract LegendCollection {
             paramsNFT,
             _amount,
             _pubIdValue,
-            _dynamicNFTAddressValue
+            _collectionSupply,
+            _dynamicNFTAddressValue,
+            _creatorAddress
         );
     }
 
@@ -408,6 +442,25 @@ contract LegendCollection {
         emit LegendEscrowUpdated(
             oldAddress,
             _newLegendEscrowAddress,
+            msg.sender
+        );
+    }
+
+    function setLegendDrop(address _newLegendDropAddress) external onlyAdmin {
+        address oldAddress = address(_legendDrop);
+        _legendDrop = LegendDrop(_newLegendDropAddress);
+        emit LegendDropUpdated(oldAddress, _newLegendDropAddress, msg.sender);
+    }
+
+    function setLegendFulfillment(address _newLegendFulfillmentAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_legendFulfillment);
+        _legendFulfillment = LegendFulfillment(_newLegendFulfillmentAddress);
+        emit LegendFulfillmentUpdated(
+            oldAddress,
+            _newLegendFulfillmentAddress,
             msg.sender
         );
     }
@@ -691,5 +744,9 @@ contract LegendCollection {
 
     function getLegendFactoryContract() public view returns (address) {
         return address(_legendFactory);
+    }
+
+    function getLegendFulfillmentContract() public view returns (address) {
+        return address(_legendFulfillment);
     }
 }
