@@ -72,7 +72,6 @@ describe("LegendFactory", function () {
     const myStruct = {
       lensHubProxyAddress: legendFactory.address,
       legendFactoryAddress: legendFactory.address,
-      deployerAddressValue: writer.address,
       URIArrayValue: URIValues,
       grantNameValue: grantName,
       editionAmountValue: editionAmount,
@@ -136,16 +135,13 @@ describe("LegendFactory", function () {
         const myStruct = {
           lensHubProxyAddress: legendFactory.address,
           legendFactoryAddress: legendFactory.address,
-          deployerAddressValue: deployer.address,
           URIArrayValue: URIValues,
           grantNameValue: grantName,
           editionAmountValue: editionAmount,
         };
-        const tx = await legendFactory.createContracts(
-          pubId,
-          profileId,
-          myStruct
-        );
+        const tx = await legendFactory
+          .connect(deployer)
+          .createContracts(pubId, profileId, myStruct);
         const receipt = await tx.wait();
         const actualTimestamp = (
           await ethers.provider.getBlock(receipt.blockNumber)
@@ -189,6 +185,50 @@ describe("LegendFactory", function () {
       const pubId = 8199;
       const profileId = 81992;
       const editionAmount = 100;
+      const grantName = "HelloAgain";
+      const URIValues = [
+        "text1",
+        "text2",
+        "text3",
+        "text1",
+        "text2",
+        "text3",
+        "text1",
+        "text2",
+        "text3",
+        "text1",
+        "text2",
+        "text3",
+      ];
+
+      const myStruct = {
+        lensHubProxyAddress: legendFactory.address,
+        legendFactoryAddress: legendFactory.address,
+        URIArrayValue: URIValues,
+        grantNameValue: grantName,
+        editionAmountValue: editionAmount,
+      };
+
+      await legendFactory
+        .connect(deployer)
+        .createContracts(pubId, profileId, myStruct);
+
+      const deployedLegendKeepers =
+        await legendFactory.getDeployedLegendKeepers(deployer.address);
+      const deployedLegendAccessControls =
+        await legendFactory.getDeployedLegendAccessControls(deployer.address);
+      const deployedLegendDynamicNFTs =
+        await legendFactory.getDeployedLegendDynamicNFTs(deployer.address);
+
+      expect(deployedLegendKeepers).to.have.lengthOf(2);
+      expect(deployedLegendAccessControls).to.have.lengthOf(2);
+      expect(deployedLegendDynamicNFTs).to.have.lengthOf(2);
+    });
+
+    it("cannot redeploy with the same grant name", async () => {
+      const pubId = 8199;
+      const profileId = 81992;
+      const editionAmount = 100;
       const grantName = "TestGrant";
       const URIValues = [
         "text1",
@@ -208,24 +248,69 @@ describe("LegendFactory", function () {
       const myStruct = {
         lensHubProxyAddress: legendFactory.address,
         legendFactoryAddress: legendFactory.address,
-        deployerAddressValue: deployer.address,
+        URIArrayValue: URIValues,
+        grantNameValue: grantName,
+        editionAmountValue: editionAmount,
+      };
+      await expect(
+        legendFactory
+          .connect(writer)
+          .createContracts(pubId, profileId, myStruct)
+      ).to.be.revertedWith("LegendFactory: Grant Name must be unique.");
+    });
+
+    it("can redeploy with the same grant name if different sender", async () => {
+      const pubId = 8199;
+      const profileId = 81992;
+      const editionAmount = 100;
+      const grantName = "HelloAgain";
+      const URIValues = [
+        "text1",
+        "text2",
+        "text3",
+        "text1",
+        "text2",
+        "text3",
+        "text1",
+        "text2",
+        "text3",
+        "text1",
+        "text2",
+        "text3",
+      ];
+
+      const myStruct = {
+        lensHubProxyAddress: legendFactory.address,
+        legendFactoryAddress: legendFactory.address,
         URIArrayValue: URIValues,
         grantNameValue: grantName,
         editionAmountValue: editionAmount,
       };
 
-      await legendFactory.createContracts(pubId, profileId, myStruct);
+      const tx = await legendFactory
+        .connect(writer)
+        .createContracts(pubId, profileId, myStruct);
+      const receipt = await tx.wait();
+      const actualTimestamp = (
+        await ethers.provider.getBlock(receipt.blockNumber)
+      ).timestamp;
 
-      const deployedLegendKeepers =
-        await legendFactory.getDeployedLegendKeepers(deployer.address);
-      const deployedLegendAccessControls =
-        await legendFactory.getDeployedLegendAccessControls(deployer.address);
-      const deployedLegendDynamicNFTs =
-        await legendFactory.getDeployedLegendDynamicNFTs(deployer.address);
-
-      expect(deployedLegendKeepers).to.have.lengthOf(2);
-      expect(deployedLegendAccessControls).to.have.lengthOf(2);
-      expect(deployedLegendDynamicNFTs).to.have.lengthOf(2);
+      expect(tx)
+        .to.emit(legendFactory, "FactoryDeployed")
+        .withArgs(
+          (await legendFactory.getDeployedLegendKeepers(writer.address)).slice(
+            -1
+          )[0],
+          (
+            await legendFactory.getDeployedLegendAccessControls(writer.address)
+          ).slice(-1)[0],
+          (
+            await legendFactory.getDeployedLegendDynamicNFTs(writer.address)
+          ).slice(-1)[0],
+          grantName,
+          writer.address,
+          actualTimestamp
+        );
     });
   });
 

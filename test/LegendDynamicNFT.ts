@@ -69,13 +69,12 @@ describe("LegendDynamicNFT", function () {
     const myStruct = {
       lensHubProxyAddress: legendFactory.address,
       legendFactoryAddress: legendFactory.address,
-      deployerAddressValue: deployer.address,
       URIArrayValue: URIArray,
       grantNameValue: grantName,
       editionAmountValue: editionAmount,
     };
 
-    const tx = await legendFactory.createContracts(pubId, profileId, myStruct);
+    const tx = await legendFactory.connect(deployer).createContracts(pubId, profileId, myStruct);
     const receipt = await tx.wait();
 
     const event = receipt.events.find(

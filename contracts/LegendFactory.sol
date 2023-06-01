@@ -79,18 +79,27 @@ contract LegendFactory {
         uint256 _profileId,
         DynamicNFTLibrary.ConstructorArgs memory args
     ) public {
+        address _grantDeployer = msg.sender;
+
+        require(
+            bytes(_deployerToGrant[_grantDeployer][args.grantNameValue].name)
+                .length == 0,
+            "LegendFactory: Grant Name must be unique."
+        );
+
         // Deploy LegendAccessControl
         LegendAccessControl newLegendAccessControl = new LegendAccessControl(
             "Legend AccessControl",
             "LAC",
-            args.deployerAddressValue
+            _grantDeployer
         );
 
         // Deploy LegendDynamicNFT
         LegendDynamicNFT newLegendDynamicNFT = new LegendDynamicNFT(
             args,
             address(newLegendAccessControl),
-            address(this)
+            address(this),
+            _grantDeployer
         );
 
         // Deploy LegendKeeper
@@ -101,14 +110,14 @@ contract LegendFactory {
             args.lensHubProxyAddress,
             address(newLegendDynamicNFT),
             address(newLegendAccessControl),
-            args.deployerAddressValue,
+            _grantDeployer,
             "Legend Keeper",
             "LKEEP"
         );
 
         newLegendDynamicNFT.setLegendKeeperAddress(address(newLegendKeeper));
 
-        _accessControl.addWriter(args.deployerAddressValue);
+        _accessControl.addWriter(_grantDeployer);
 
         Grant memory grantDetails = Grant(
             [
@@ -121,17 +130,13 @@ contract LegendFactory {
             "live"
         );
 
-        _deployerToGrant[args.deployerAddressValue][
-            args.grantNameValue
-        ] = grantDetails;
+        _deployerToGrant[_grantDeployer][args.grantNameValue] = grantDetails;
 
-        _deployedLegendKeepers[args.deployerAddressValue].push(
-            address(newLegendKeeper)
-        );
-        _deployedLegendDynamicNFTs[args.deployerAddressValue].push(
+        _deployedLegendKeepers[_grantDeployer].push(address(newLegendKeeper));
+        _deployedLegendDynamicNFTs[_grantDeployer].push(
             address(newLegendDynamicNFT)
         );
-        _deployedLegendAccessControls[args.deployerAddressValue].push(
+        _deployedLegendAccessControls[_grantDeployer].push(
             address(newLegendAccessControl)
         );
 
@@ -140,7 +145,7 @@ contract LegendFactory {
             address(newLegendAccessControl),
             address(newLegendDynamicNFT),
             args.grantNameValue,
-            args.deployerAddressValue,
+            msg.sender,
             block.timestamp
         );
     }

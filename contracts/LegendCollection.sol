@@ -177,7 +177,7 @@ contract LegendCollection {
     modifier onlyAdmin() {
         require(
             _accessControl.isAdmin(msg.sender),
-            "AccessControl: Only admin can perform this action"
+            "GlobalLegendAccessControl: Only admin can perform this action"
         );
         _;
     }
@@ -185,7 +185,7 @@ contract LegendCollection {
     modifier onlyCreator(uint256 _collectionId) {
         require(
             msg.sender == _collections[_collectionId].creator,
-            "ChromadinCollection: Only the creator can edit this collection"
+            "LegendCollection: Only the creator can edit this collection"
         );
         _;
     }
@@ -569,7 +569,11 @@ contract LegendCollection {
         return _dynamicNFTAddress[_collectionId];
     }
 
-    function getCollectionPubId(uint256 _collectionId) public view returns (uint256) {
+    function getCollectionPubId(uint256 _collectionId)
+        public
+        view
+        returns (uint256)
+    {
         return _pubId[_collectionId];
     }
 
@@ -587,11 +591,9 @@ contract LegendCollection {
     ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            require(
-                _legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow),
-                "LegendCollection: The entire collection must be owned by Escrow to update"
-            );
-            _legendNFT.setPrintType(tokenIds[i], _newPrintType);
+            if (_legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow)) {
+                _legendNFT.setPrintType(tokenIds[i], _newPrintType);
+            }
         }
         string memory oldPrintType = _printType[_collectionId];
         _printType[_collectionId] = _newPrintType;
@@ -607,13 +609,16 @@ contract LegendCollection {
         uint256 _newFulfillerId,
         uint256 _collectionId
     ) external onlyCreator(_collectionId) {
+        require(
+            _legendFulfillment.getFulfillerAddress(_newFulfillerId) !=
+                address(0),
+            "LegendFulfillment: FulfillerId does not exist."
+        );
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            require(
-                _legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow),
-                "LegendCollection: The entire collection must be owned by Escrow to update"
-            );
-            _legendNFT.setFulfillerId(tokenIds[i], _newFulfillerId);
+            if (_legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow)) {
+                _legendNFT.setFulfillerId(tokenIds[i], _newFulfillerId);
+            }
         }
         uint256 oldFufillerId = _fulfillerId[_collectionId];
         _fulfillerId[_collectionId] = _newFulfillerId;
@@ -660,7 +665,9 @@ contract LegendCollection {
     {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            _legendNFT.setDiscount(tokenIds[i], _newDiscount);
+            if (_legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow)) {
+                _legendNFT.setDiscount(tokenIds[i], _newDiscount);
+            }
         }
         _discount[_collectionId] = _newDiscount;
         emit CollectionDiscountUpdated(_collectionId, _newDiscount, msg.sender);
@@ -672,7 +679,9 @@ contract LegendCollection {
     ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            _legendNFT.setGrantCollectorsOnly(tokenIds[i], _collectorsOnly);
+            if (_legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow)) {
+                _legendNFT.setGrantCollectorsOnly(tokenIds[i], _collectorsOnly);
+            }
         }
         _grantCollectorsOnly[_collectionId] = _collectorsOnly;
         emit CollectionGrantCollectorsOnlyUpdated(
@@ -688,11 +697,9 @@ contract LegendCollection {
     ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            require(
-                _legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow),
-                "LegendCollection: The entire collection must be owned by Escrow to update"
-            );
-            _legendNFT.setBasePrices(tokenIds[i], _newPrices);
+            if (_legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow)) {
+                _legendNFT.setBasePrices(tokenIds[i], _newPrices);
+            }
         }
         uint256[] memory oldPrices = _collections[_collectionId].basePrices;
         _collections[_collectionId].basePrices = _newPrices;
@@ -710,11 +717,12 @@ contract LegendCollection {
     ) external onlyCreator(_collectionId) {
         uint256[] memory tokenIds = _collections[_collectionId].tokenIds;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            require(
-                _legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow),
-                "LegendCollection: The entire collection must be owned by Escrow to update"
-            );
-            _legendNFT.setTokenAcceptedTokens(tokenIds[i], _newAcceptedTokens);
+            if (_legendNFT.ownerOf(tokenIds[i]) == address(_legendEscrow)) {
+                _legendNFT.setTokenAcceptedTokens(
+                    tokenIds[i],
+                    _newAcceptedTokens
+                );
+            }
         }
         address[] memory oldTokens = _collections[_collectionId].acceptedTokens;
         _collections[_collectionId].acceptedTokens = _newAcceptedTokens;
@@ -752,5 +760,9 @@ contract LegendCollection {
 
     function getLegendFulfillmentContract() public view returns (address) {
         return address(_legendFulfillment);
+    }
+
+    function getLegendDropContract() public view returns (address) {
+        return address(_legendDrop);
     }
 }

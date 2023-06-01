@@ -257,7 +257,7 @@ contract LegendNFT is ERC721Enumerable {
         return _tokens[_tokenId].acceptedTokens;
     }
 
-    function getBasePrices(uint256 _tokenId)
+    function getTokenBasePrices(uint256 _tokenId)
         public
         view
         returns (uint256[] memory)
@@ -324,7 +324,7 @@ contract LegendNFT is ERC721Enumerable {
     function setTokenAcceptedTokens(
         uint256 _tokenId,
         address[] memory _newAcceptedTokens
-    ) public onlyCollectionContract tokensInEscrow(_tokenId) {
+    ) public onlyCollectionContract {
         address[] memory oldTokens = _tokens[_tokenId].acceptedTokens;
         _tokens[_tokenId].acceptedTokens = _newAcceptedTokens;
         emit TokenAcceptedTokensUpdated(
@@ -338,7 +338,6 @@ contract LegendNFT is ERC721Enumerable {
     function setBasePrices(uint256 _tokenId, uint256[] memory _newPrices)
         public
         onlyCollectionContract
-        tokensInEscrow(_tokenId)
     {
         uint256[] memory oldPrices = _tokens[_tokenId].basePrices;
         _tokens[_tokenId].basePrices = _newPrices;
@@ -348,7 +347,6 @@ contract LegendNFT is ERC721Enumerable {
     function setFulfillerId(uint256 _tokenId, uint256 _newFulfillerId)
         public
         onlyCollectionContract
-        tokensInEscrow(_tokenId)
     {
         uint256 oldFulfillerId = _fulfillerId[_tokenId];
         _fulfillerId[_tokenId] = _newFulfillerId;
@@ -363,7 +361,6 @@ contract LegendNFT is ERC721Enumerable {
     function setPrintType(uint256 _tokenId, string memory _newPrintType)
         public
         onlyCollectionContract
-        tokensInEscrow(_tokenId)
     {
         string memory oldPrintType = _printType[_tokenId];
         _printType[_tokenId] = _newPrintType;
@@ -388,7 +385,6 @@ contract LegendNFT is ERC721Enumerable {
     function setGrantCollectorsOnly(uint256 _tokenId, bool _collectorsOnly)
         public
         onlyCollectionContract
-        tokensInEscrow(_tokenId)
     {
         _grantCollectorsOnly[_tokenId] = _collectorsOnly;
         emit TokenGrantCollectorsOnlyUpdated(
@@ -401,7 +397,6 @@ contract LegendNFT is ERC721Enumerable {
     function setDiscount(uint256 _tokenId, uint256 _newDiscount)
         public
         onlyCollectionContract
-        tokensInEscrow(_tokenId)
     {
         _discount[_tokenId] = _newDiscount;
         emit TokenDiscountUpdated(_tokenId, _newDiscount, msg.sender);

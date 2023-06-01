@@ -13,7 +13,6 @@ library DynamicNFTLibrary {
     struct ConstructorArgs {
         address lensHubProxyAddress;
         address legendFactoryAddress;
-        address deployerAddressValue;
         string[] URIArrayValue;
         string grantNameValue;
         uint256 editionAmountValue;
@@ -83,12 +82,13 @@ contract LegendDynamicNFT is ERC721 {
     constructor(
         DynamicNFTLibrary.ConstructorArgs memory args,
         address _legendAccessControlValue,
-        address _legendFactoryValue
+        address _legendFactoryValue,
+        address _deployerAddressValue
     ) ERC721("LegendDynamicNFT", "LDNFT") {
         _editionAmount = args.editionAmountValue;
         _URIArray = args.URIArrayValue;
         _currentCounter = 0;
-        _deployerAddress = args.deployerAddressValue;
+        _deployerAddress = _deployerAddressValue;
         _legendAccessControl = LegendAccessControl(_legendAccessControlValue);
         _legendFactory = LegendFactory(_legendFactoryValue);
         _lensHubProxy = ILensHubProxy(args.lensHubProxyAddress);

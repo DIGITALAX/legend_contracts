@@ -8,6 +8,7 @@ import "./LegendEscrow.sol";
 import "./LegendNFT.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./LegendFulfillment.sol";
+import "hardhat/console.sol";
 
 contract LegendMarket {
     LegendCollection private _legendCollection;
@@ -118,8 +119,9 @@ contract LegendMarket {
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             if (_legendNFT.getTokenGrantCollectorsOnly(_tokenIds[i])) {
                 require(
-                    IDynamicNFT(_legendNFT.getTokenDynamicNFTAddress(_tokenIds[i]))
-                        .getCollectorClaimedNFT(msg.sender),
+                    IDynamicNFT(
+                        _legendNFT.getTokenDynamicNFTAddress(_tokenIds[i])
+                    ).getCollectorClaimedNFT(msg.sender),
                     "LegendMarket: Must be authorized grant collector."
                 );
             }
@@ -155,7 +157,7 @@ contract LegendMarket {
             );
             for (uint256 j = 0; j < acceptedTokens.length; j++) {
                 if (acceptedTokens[j] == _chosenTokenAddress) {
-                    prices[i] = _legendNFT.getBasePrices(_tokenIds[i])[j];
+                    prices[i] = _legendNFT.getTokenBasePrices(_tokenIds[i])[j];
 
                     if (
                         _legendNFT.getTokenDiscount(_tokenIds[i]) != 0 &&
@@ -163,6 +165,10 @@ contract LegendMarket {
                             _legendNFT.getTokenDynamicNFTAddress(_tokenIds[i])
                         ).getCollectorClaimedNFT(msg.sender)
                     ) {
+                        require(
+                            _legendNFT.getTokenDiscount(_tokenIds[i]) < 100,
+                            "LegendMarket: Discount cannot exceed 100."
+                        );
                         totalPrice +=
                             prices[i] *
                             _legendNFT.getTokenDiscount(_tokenIds[i]);
@@ -191,13 +197,15 @@ contract LegendMarket {
                 msg.sender,
                 _legendNFT.getTokenCreator(_tokenIds[i]),
                 prices[i] -
-                    prices[i] *
-                    _legendFulfillment.getFulfillerPercent(_fulfillerId)
+                    (prices[i] *
+                        _legendFulfillment.getFulfillerPercent(_fulfillerId)) /
+                    100
             );
             IERC20(_chosenTokenAddress).transferFrom(
                 msg.sender,
                 _legendFulfillment.getFulfillerAddress(_fulfillerId),
-                prices[i] * _legendFulfillment.getFulfillerPercent(_fulfillerId)
+                (prices[i] *
+                    _legendFulfillment.getFulfillerPercent(_fulfillerId)) / 100
             );
             _legendEscrow.release(_tokenIds[i], false, msg.sender);
 

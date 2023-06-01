@@ -21,6 +21,7 @@ describe("LegendNFT + LegendCollection", function () {
     writer: SignerWithAddress,
     nonAdmin: SignerWithAddress,
     fulfiller: SignerWithAddress,
+    secondWriter: SignerWithAddress,
     token: Contract;
 
   const URIArray = [
@@ -43,7 +44,8 @@ describe("LegendNFT + LegendCollection", function () {
   const profileId = 81992;
 
   beforeEach(async () => {
-    [admin, writer, nonAdmin, fulfiller] = await ethers.getSigners();
+    [admin, writer, nonAdmin, fulfiller, secondWriter] =
+      await ethers.getSigners();
     const GlobalAccessControl = await ethers.getContractFactory(
       "GlobalLegendAccessControl"
     );
@@ -153,10 +155,9 @@ describe("LegendNFT + LegendCollection", function () {
     // mint to the factory with the writer address
     accessControl.connect(admin).addAdmin(legendFactory.address);
 
-    const myStruct = {
+    const thisStruct = {
       lensHubProxyAddress: legendFactory.address,
       legendFactoryAddress: legendFactory.address,
-      deployerAddressValue: writer.address,
       URIArrayValue: URIArray,
       grantNameValue: grantName,
       editionAmountValue: editionAmount,
@@ -164,7 +165,7 @@ describe("LegendNFT + LegendCollection", function () {
 
     const tx = await legendFactory
       .connect(writer)
-      .createContracts(pubId, profileId, myStruct);
+      .createContracts(pubId, profileId, thisStruct);
     const receipt = await tx.wait();
 
     const event = receipt.events.find(
@@ -207,7 +208,7 @@ describe("LegendNFT + LegendCollection", function () {
       printType,
       fulfillerId: 1,
       discount: 10,
-      grantCollectorsOnly: true,
+      grantCollectorsOnly: false,
     };
 
     tx = await legendCollection
@@ -308,7 +309,7 @@ describe("LegendNFT + LegendCollection", function () {
       ]);
 
       for (let i = 1; i < amount; i++) {
-        expect(await legendNFT.getBasePrices(i)).to.eql([
+        expect(await legendNFT.getTokenBasePrices(i)).to.eql([
           BigNumber.from("200000000000000000"),
           BigNumber.from("1200000000000000000"),
           BigNumber.from("200000000000000000"),
@@ -344,9 +345,9 @@ describe("LegendNFT + LegendCollection", function () {
     it("correct collectors only for all", async () => {
       expect(
         await legendCollection.getCollectionGrantCollectorsOnly(1)
-      ).to.equal(true);
+      ).to.equal(false);
       for (let i = 1; i < amount; i++) {
-        expect(await legendNFT.getTokenGrantCollectorsOnly(i)).to.equal(true);
+        expect(await legendNFT.getTokenGrantCollectorsOnly(i)).to.equal(false);
       }
     });
 
@@ -389,14 +390,6 @@ describe("LegendNFT + LegendCollection", function () {
     });
   });
 
-  // correctly updates drop, print etc.
-  // correctly mints again after edit
-  // correctly mints again after burn
-  // correctly updates discount / buyers after discount / collectors only
-  // rejects on wrong fulfiller etc.
-  // only lets correct creators update
-  // add collection to drop for drop id
-
   describe("it should reject for all requires", () => {
     it("rejects on non grant writer", async () => {
       await expect(
@@ -419,7 +412,7 @@ describe("LegendNFT + LegendCollection", function () {
             printType,
             fulfillerId: 1,
             discount: 10,
-            grantCollectorsOnly: true,
+            grantCollectorsOnly: false,
           },
           grantName
         )
@@ -430,7 +423,6 @@ describe("LegendNFT + LegendCollection", function () {
       await legendFactory.connect(nonAdmin).createContracts(800, 900, {
         lensHubProxyAddress: legendFactory.address,
         legendFactoryAddress: legendFactory.address,
-        deployerAddressValue: writer.address,
         URIArrayValue: URIArray,
         grantNameValue: "new grant other",
         editionAmountValue: editionAmount,
@@ -465,20 +457,26 @@ describe("LegendNFT + LegendCollection", function () {
     });
   });
 
-  xdescribe("it should correctly track 2nd collection", async () => {
+  describe("it should correctly track 2nd collection", async () => {
     beforeEach("mints second collection", async () => {
-      await legendCollection.mintCollection(
-        "second_uri",
+      await legendCollection.connect(writer).mintCollection(
         15,
-        collection_name,
-        acceptedTokens,
-        basePrices
+        {
+          acceptedTokens,
+          basePrices,
+          uri: "second_uri",
+          printType,
+          fulfillerId: 1,
+          discount: 10,
+          grantCollectorsOnly: false,
+        },
+        grantName
       );
       blockNumber = await ethers.provider.getBlockNumber();
     });
 
     it("new collection id", async () => {
-      expect(await legendCollection.collectionSupply()).to.equal(2);
+      expect(await legendCollection.getCollectionSupply()).to.equal(2);
     });
 
     it("new token ids", async () => {
@@ -502,17 +500,14 @@ describe("LegendNFT + LegendCollection", function () {
     });
 
     it("new total supply", async () => {
-      expect(await legendNFT.totalSupply()).to.equal(25);
+      expect(await legendNFT.getTotalSupplyCount()).to.equal(25);
     });
 
     it("new uris", async () => {
+      expect(await legendCollection.getCollectionURI(2)).to.equal("second_uri");
       for (let i = amount + 1; i < amount + 15; i++) {
         expect(await legendNFT.tokenURI(i + 1)).to.equal("second_uri");
       }
-    });
-
-    it("new timestamp", async () => {
-      const block = await ethers.provider.getBlock(blockNumber);
     });
 
     it("all tokens are owned by escrow", async () => {
@@ -522,32 +517,28 @@ describe("LegendNFT + LegendCollection", function () {
     });
   });
 
-  xdescribe("it should fail to mint if not collection contract", () => {
+  describe("it should fail to mint if not collection contract", () => {
     it("fail mint batch", async () => {
       await expect(
         legendNFT.mintBatch(
-          "second_uri",
-          3,
-          3,
-          admin.address,
-          acceptedTokens,
-          basePrices
+          {
+            acceptedTokens,
+            basePrices,
+            uri: "second_uri",
+            printType,
+            fulfillerId: 1,
+            discount: 10,
+            grantCollectorsOnly: false,
+          },
+          amount,
+          pubId,
+          1,
+          legendDynamicNFT.address,
+          admin.address
         )
       ).to.be.revertedWith(
         "LegendNFT: Only collection contract can mint tokens"
       );
-    });
-
-    it("fails mint if token and prices are not the same length", async () => {
-      await expect(
-        legendCollection.mintCollection(
-          "second_uri",
-          3,
-          "coll_4",
-          [token.address],
-          basePrices
-        )
-      ).to.be.revertedWith("LegendCollection: Invalid input");
     });
   });
 
@@ -618,113 +609,162 @@ describe("LegendNFT + LegendCollection", function () {
     });
   });
 
-  xdescribe("update contract dependencies", () => {
+  describe("update contract dependencies", () => {
     beforeEach("redeploy new contracts", async () => {
-      const AccessControl = await ethers.getContractFactory("AccessControl");
+      const AccessControl = await ethers.getContractFactory(
+        "GlobalLegendAccessControl"
+      );
       const LegendEscrow = await ethers.getContractFactory("LegendEscrow");
       const LegendCollection = await ethers.getContractFactory(
         "LegendCollection"
       );
       const LegendNFT = await ethers.getContractFactory("LegendNFT");
       const LegendPayment = await ethers.getContractFactory("LegendPayment");
-      const LegendMarketplace = await ethers.getContractFactory(
-        "LegendMarketplace"
+      const LegendFulfillment = await ethers.getContractFactory(
+        "LegendFulfillment"
       );
+      const LegendMarketplace = await ethers.getContractFactory("LegendMarket");
       const LegendDrop = await ethers.getContractFactory("LegendDrop");
-      accessControl = await AccessControl.deploy(
-        "Legend Access Control",
-        "CHROA"
-      );
+      accessControl = await AccessControl.deploy("LegendAccessControl", "LEAC");
       legendPayment = await LegendPayment.deploy(accessControl.address);
       legendNFT = await LegendNFT.deploy(accessControl.address);
       legendCollection = await LegendCollection.deploy(
         legendNFT.address,
         accessControl.address,
         legendPayment.address,
-        "Legend Collection",
-        "CHROC"
+        legendFactory.address,
+        "LegendCollection",
+        "LECO"
+      );
+      legendFulfillment = await LegendFulfillment.deploy(
+        accessControl.address,
+        legendNFT.address,
+        legendCollection.address,
+        "LEFUL",
+        "LegendFulfillment"
       );
       legendMarketplace = await LegendMarketplace.deploy(
         legendCollection.address,
         accessControl.address,
         legendFulfillment.address,
         legendNFT.address,
-        "Legend Marketplace",
-        "CHROM"
+        "LegendMarketplace",
+        "LEMA"
       );
       legendDrop = await LegendDrop.deploy(
         legendCollection.address,
         accessControl.address,
-        "Legend Drop",
-        "CHROD"
+        "LegendDrop",
+        "LEDR"
       );
       legendEscrow = await LegendEscrow.deploy(
         legendCollection.address,
         legendMarketplace.address,
         accessControl.address,
         legendNFT.address,
-        "Legend Escrow",
-        "CHROE"
+        "LegendEscrow",
+        "LEES"
       );
+
+      accessControl.connect(admin).addAdmin(legendFactory.address);
     });
 
     it("updates access controls", async () => {
-      const old_access = await legendNFT.accessControl();
+      const old_access = await legendNFT.getAccessControlContract();
       expect(await legendNFT.updateAccessControl(accessControl.address))
-        .to.emit("AccessControlUpdated")
+        .to.emit(legendNFT, "AccessControlUpdated")
         .withArgs(old_access, accessControl.address, admin.address);
-      expect(await legendNFT.accessControl()).to.equal(accessControl.address);
+      expect(await legendNFT.getAccessControlContract()).to.equal(
+        accessControl.address
+      );
+
       expect(await legendCollection.updateAccessControl(accessControl.address))
-        .to.emit("AccessControlUpdated")
+        .to.emit(legendCollection, "AccessControlUpdated")
         .withArgs(old_access, accessControl.address, admin.address);
-      expect(await legendCollection.accessControl()).to.equal(
+      expect(await legendCollection.getAccessControlContract()).to.equal(
         accessControl.address
       );
     });
 
     it("updates escrow", async () => {
+      const oldAddress = await legendNFT.getLegendEscrowContract();
       expect(await legendNFT.setLegendEscrow(legendEscrow.address))
-        .to.emit("LegendEscrowUpdated")
-        .withArgs(legendEscrow.address, admin.address);
-      expect(await legendNFT.legendEscrow()).to.equal(legendEscrow.address);
+        .to.emit(legendNFT, "LegendEscrowUpdated")
+        .withArgs(oldAddress, legendEscrow.address, admin.address);
+      expect(await legendNFT.getLegendEscrowContract()).to.equal(
+        legendEscrow.address
+      );
+
+      const oldAdressColl = await legendCollection.getLegendEscrowContract();
+
       expect(await legendCollection.setLegendEscrow(legendEscrow.address))
-        .to.emit("LegendEscrowUpdated")
-        .withArgs(legendEscrow.address, admin.address);
-      expect(await legendCollection.legendEscrow()).to.equal(
+        .to.emit(legendCollection, "LegendEscrowUpdated")
+        .withArgs(oldAdressColl, legendEscrow.address, admin.address);
+      expect(await legendCollection.getLegendEscrowContract()).to.equal(
         legendEscrow.address
       );
     });
 
     it("updates collection", async () => {
+      const oldAddress = await legendNFT.getLegendCollectionContract();
       expect(await legendNFT.setLegendCollection(legendCollection.address))
-        .to.emit("LegendCollectionUpdated")
-        .withArgs(legendCollection.address, admin.address);
-      expect(await legendNFT.legendCollection()).to.equal(
+        .to.emit(legendNFT, "LegendCollectionUpdated")
+        .withArgs(oldAddress, legendCollection.address, admin.address);
+      expect(await legendNFT.getLegendCollectionContract()).to.equal(
         legendCollection.address
       );
     });
 
     it("updates drop", async () => {
+      const oldAddress = await legendCollection.getLegendDropContract();
       expect(await legendCollection.setLegendDrop(legendDrop.address))
-        .to.emit("LegendDropUpdated")
-        .withArgs(legendDrop.address, admin.address);
-      expect(await legendCollection.legendDrop()).to.equal(legendDrop.address);
+        .to.emit(legendCollection, "LegendDropUpdated")
+        .withArgs(oldAddress, legendDrop.address, admin.address);
+      expect(await legendCollection.getLegendDropContract()).to.equal(
+        legendDrop.address
+      );
     });
 
     it("updates payment", async () => {
+      const oldAddress = await legendCollection.getLegendPaymentContract();
       expect(await legendCollection.updateLegendPayment(legendPayment.address))
-        .to.emit("LegendPaymentUpdated")
-        .withArgs(legendPayment.address, admin.address);
-      expect(await legendCollection.legendPayment()).to.equal(
+        .to.emit(legendCollection, "LegendPaymentUpdated")
+        .withArgs(oldAddress, legendPayment.address, admin.address);
+      expect(await legendCollection.getLegendPaymentContract()).to.equal(
         legendPayment.address
       );
     });
 
+    it("updates fulfillment", async () => {
+      const oldAddress = await legendCollection.getLegendFulfillmentContract();
+      expect(
+        await legendCollection.setLegendFulfillment(legendFulfillment.address)
+      )
+        .to.emit(legendCollection, "LegendFulfillmentUpdated")
+        .withArgs(oldAddress, legendFulfillment.address, admin.address);
+      expect(await legendCollection.getLegendFulfillmentContract()).to.equal(
+        legendFulfillment.address
+      );
+    });
+
+    it("updates factory", async () => {
+      const oldAddress = await legendCollection.getLegendFactoryContract();
+      expect(await legendCollection.updateLegendFactory(legendFactory.address))
+        .to.emit(legendCollection, "LegendFactoryUpdated")
+        .withArgs(oldAddress, legendFactory.address, admin.address);
+      expect(await legendCollection.getLegendFactoryContract()).to.equal(
+        legendFactory.address
+      );
+    });
+
     it("updates NFT", async () => {
+      const oldAddress = await legendCollection.getLegendNFTContract();
       expect(await legendCollection.updateLegendNFT(legendNFT.address))
-        .to.emit("LegendNFTUpdated")
-        .withArgs(legendNFT.address, admin.address);
-      expect(await legendCollection.legendNFT()).to.equal(legendNFT.address);
+        .to.emit(legendCollection, "LegendNFTUpdated")
+        .withArgs(oldAddress, legendNFT.address, admin.address);
+      expect(await legendCollection.getLegendNFTContract()).to.equal(
+        legendNFT.address
+      );
     });
 
     it("should fail all updates if not admin", async () => {
@@ -732,70 +772,117 @@ describe("LegendNFT + LegendCollection", function () {
         legendNFT
           .connect(nonAdmin)
           .setLegendCollection(legendCollection.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
       await expect(
         legendNFT.connect(nonAdmin).setLegendEscrow(legendEscrow.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
       await expect(
         legendNFT.connect(nonAdmin).updateAccessControl(accessControl.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
       await expect(
         legendCollection
           .connect(nonAdmin)
           .updateAccessControl(accessControl.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
       await expect(
         legendCollection.connect(nonAdmin).updateLegendNFT(legendNFT.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
       await expect(
         legendCollection.connect(nonAdmin).setLegendEscrow(legendEscrow.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
       await expect(
         legendCollection.connect(nonAdmin).setLegendDrop(legendDrop.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
       await expect(
         legendCollection
           .connect(nonAdmin)
           .updateLegendPayment(legendPayment.address)
-      ).to.be.revertedWith("AccessControl: Only admin can perform this action");
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
+      await expect(
+        legendCollection
+          .connect(nonAdmin)
+          .setLegendFulfillment(legendFulfillment.address)
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
+      await expect(
+        legendCollection
+          .connect(nonAdmin)
+          .updateLegendFactory(legendFactory.address)
+      ).to.be.revertedWith(
+        "GlobalLegendAccessControl: Only admin can perform this action"
+      );
     });
   });
 
-  xdescribe("it should update setters and read getters", () => {
+  describe("it should update setters and read getters", () => {
     beforeEach("create collection with write address", async () => {
       // give access control to writer
-      await accessControl.addWriter(writer.address);
-      await legendCollection
-        .connect(writer)
-        .mintCollection(
-          "third_uri",
-          6,
-          "collection_three",
+      await legendFactory
+        .connect(secondWriter)
+        .createContracts(pubId, profileId, {
+          lensHubProxyAddress: legendFactory.address,
+          legendFactoryAddress: legendFactory.address,
+          URIArrayValue: URIArray,
+          grantNameValue: grantName,
+          editionAmountValue: editionAmount,
+        });
+
+      await legendCollection.connect(secondWriter).mintCollection(
+        amount,
+        {
           acceptedTokens,
-          basePrices
-        );
+          basePrices,
+          uri: "newurivalue",
+          printType,
+          fulfillerId: 1,
+          discount: 20,
+          grantCollectorsOnly: false,
+        },
+        grantName
+      );
     });
 
     it("set URI", async () => {
       const old = await legendCollection.getCollectionURI(2);
       expect(
-        await legendCollection.connect(writer).setCollectionURI("new_token", 2)
+        await legendCollection
+          .connect(secondWriter)
+          .setCollectionURI("newurivalue", 2)
       )
-        .to.emit("CollectionURIUpdated")
-        .withArgs(2, old, "new_token", writer.address);
-      expect(await legendCollection.getCollectionURI(2)).to.equal("new_token");
-      expect(await legendNFT.tokenURI(13)).to.equal("new_token");
+        .to.emit(legendCollection, "CollectionURIUpdated")
+        .withArgs(2, old, "newurivalue", secondWriter.address);
+      expect(await legendCollection.getCollectionURI(2)).to.equal(
+        "newurivalue"
+      );
+      expect(await legendNFT.tokenURI(13)).to.equal("newurivalue");
     });
 
     it("set tokens accepted", async () => {
       const old = await legendCollection.getCollectionAcceptedTokens(2);
       expect(
         await legendCollection
-          .connect(writer)
+          .connect(secondWriter)
           .setCollectionAcceptedTokens(2, [token.address])
       )
-        .to.emit("CollectionAcceptedTokensUpdated")
-        .withArgs(2, old, [token.address], writer.address);
+        .to.emit(legendCollection, "CollectionAcceptedTokensUpdated")
+        .withArgs(2, old, [token.address], secondWriter.address);
       expect(
         await legendCollection.getCollectionAcceptedTokens(2)
       ).to.deep.equal([token.address]);
@@ -808,31 +895,17 @@ describe("LegendNFT + LegendCollection", function () {
       const old = await legendCollection.getCollectionBasePrices(2);
       expect(
         await legendCollection
-          .connect(writer)
+          .connect(secondWriter)
           .setCollectionBasePrices(2, ["2000000"])
       )
-        .to.emit("CollectionBasePricesUpdated")
-        .withArgs(2, old, ["2000000"], writer.address);
+        .to.emit(legendCollection, "CollectionBasePricesUpdated")
+        .withArgs(2, old, ["2000000"], secondWriter.address);
       expect(await legendCollection.getCollectionBasePrices(2)).to.deep.equal([
         BigNumber.from("2000000"),
       ]);
-      expect(await legendNFT.getBasePrices(13)).to.deep.equal([
+      expect(await legendNFT.getTokenBasePrices(13)).to.deep.equal([
         BigNumber.from("2000000"),
       ]);
-    });
-
-    it("set collection name", async () => {
-      const old = await legendCollection.getCollectionName(2);
-      expect(
-        await legendCollection
-          .connect(writer)
-          .setCollectionName("new_name_2", 2)
-      )
-        .to.emit("CollectionNameUpdated")
-        .withArgs(2, old, "new_name_2", writer.address);
-      expect(await legendCollection.getCollectionName(2)).to.equal(
-        "new_name_2"
-      );
     });
 
     it("should fail all setters if not creator / collection contract", async () => {
@@ -843,11 +916,6 @@ describe("LegendNFT + LegendCollection", function () {
       );
       await expect(
         legendCollection.setCollectionAcceptedTokens(2, [token.address])
-      ).to.be.revertedWith(
-        "LegendCollection: Only the creator can edit this collection"
-      );
-      await expect(
-        legendCollection.setCollectionName("new_name_2", 2)
       ).to.be.revertedWith(
         "LegendCollection: Only the creator can edit this collection"
       );
@@ -871,50 +939,153 @@ describe("LegendNFT + LegendCollection", function () {
 
     it("should fail setters if collection not all in escrow", async () => {
       // buy from another collection
-      await legendCollection.mintCollection(
-        "second_uri",
-        2,
-        collection_name,
-        [token.address],
-        ["100000"]
+      await legendCollection.connect(writer).mintCollection(
+        amount,
+        {
+          acceptedTokens,
+          basePrices,
+          uri: "newurivalue2",
+          printType,
+          fulfillerId: 1,
+          discount: 20,
+          grantCollectorsOnly: false,
+        },
+        grantName
       );
 
       // add collection to a drop
-      await legendDrop.createDrop([3], "drop_uri");
+      await legendDrop.connect(writer).createDrop([3], "drop_uri");
 
       // approve allowance
       await token
         .connect(nonAdmin)
-        .approve(legendMarketplace.address, BigNumber.from("100000000"));
+        .approve(
+          legendMarketplace.address,
+          BigNumber.from("300000000000000000")
+        );
 
-      await legendMarketplace.connect(nonAdmin).buyTokens([18], token.address);
+      await legendMarketplace
+        .connect(nonAdmin)
+        .buyTokens([22], token.address, "fulfillment details");
 
       await expect(
-        legendCollection.setCollectionURI("new_token", 3)
-      ).to.be.revertedWith(
-        "LegendCollection: The entire collection must be owned by Escrow to update"
-      );
-      await expect(
-        legendCollection.setCollectionAcceptedTokens(3, [token.address])
-      ).to.be.revertedWith(
-        "LegendCollection: The entire collection must be owned by Escrow to update"
-      );
-      await expect(
-        legendCollection.setCollectionName("new_name_2", 3)
-      ).to.be.revertedWith(
-        "LegendCollection: The entire collection must be owned by Escrow to update"
-      );
-      await expect(
-        legendCollection.setCollectionBasePrices(3, ["2000000"])
+        legendCollection.connect(writer).setCollectionURI("new_token", 3)
       ).to.be.revertedWith(
         "LegendCollection: The entire collection must be owned by Escrow to update"
       );
     });
 
+    describe("only updates the values in escrow", () => {
+      beforeEach("mint and buy", async () => {
+        await legendCollection.connect(writer).mintCollection(
+          amount,
+          {
+            acceptedTokens,
+            basePrices,
+            uri: "newurivalue2",
+            printType,
+            fulfillerId: 1,
+            discount: 20,
+            grantCollectorsOnly: false,
+          },
+          grantName
+        );
+
+        // add collection to a drop
+        await legendDrop.connect(writer).createDrop([3], "drop_uri");
+
+        legendFulfillment.connect(admin).createFulfiller(10, fulfiller.address);
+
+        await token
+          .connect(nonAdmin)
+          .approve(
+            legendMarketplace.address,
+            BigNumber.from("300000000000000000")
+          );
+
+        await legendMarketplace
+          .connect(nonAdmin)
+          .buyTokens([23], token.address, "fulfillment details");
+      });
+
+      it("updates accepted tokens", async () => {
+        await legendCollection
+          .connect(writer)
+          .setCollectionAcceptedTokens(3, [token.address]);
+        const actual = await legendNFT.getTokenAcceptedTokens(23);
+        expect(
+          actual.map((address: string) => address.toLowerCase())
+        ).to.deep.equal(
+          [
+            token.address,
+            "0x0000000000000000000000000000000000001010",
+            "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+          ].map((address) => address.toLowerCase())
+        );
+        expect(await legendNFT.getTokenAcceptedTokens(21)).to.deep.equal([
+          token.address,
+        ]);
+      });
+
+      it("updates base prices", async () => {
+        await legendCollection
+          .connect(writer)
+          .setCollectionBasePrices(3, ["2000000"]);
+        expect(await legendNFT.getTokenBasePrices(23)).to.deep.equal([
+          BigNumber.from("200000000000000000"),
+          BigNumber.from("1200000000000000000"),
+          BigNumber.from("200000000000000000"),
+        ]);
+        expect(await legendNFT.getTokenBasePrices(21)).to.deep.equal([
+          BigNumber.from("2000000"),
+        ]);
+      });
+
+      it("updates fulfiller id", async () => {
+        await legendCollection.connect(writer).setCollectionFulfillerId(2, 3);
+        expect(await legendNFT.getTokenFulfillerId(23)).to.equal(1);
+        expect(await legendNFT.getTokenFulfillerId(21)).to.equal(2);
+      });
+
+      it("updates print type", async () => {
+        await legendCollection
+          .connect(writer)
+          .setCollectionPrintType("skirt", 3);
+        expect(await legendNFT.getTokenPrintType(23)).to.equal("shirt");
+        expect(await legendNFT.getTokenPrintType(21)).to.equal("skirt");
+      });
+
+      it("updates discount", async () => {
+        await legendCollection.connect(writer).setCollectionDiscount(30, 3);
+        expect(await legendNFT.getTokenDiscount(23)).to.equal(20);
+        expect(await legendNFT.getTokenDiscount(21)).to.equal(30);
+      });
+
+      it("updates collectors only", async () => {
+        await legendCollection
+          .connect(writer)
+          .setCollectionGrantCollectorsOnly(true, 3);
+        expect(await legendNFT.getTokenGrantCollectorsOnly(23)).to.equal(false);
+        expect(await legendNFT.getTokenGrantCollectorsOnly(21)).to.equal(true);
+      });
+    });
+  });
+
+  xdescribe("it updates fulfillment", () => {
     it("updates fulfillment for nft + collection", async () => {});
 
     it("fails to update fulfillment in not collection contract", async () => {});
 
-    it("updates fulfillment", async () => {});
+    it("rejects fulfiller on update if doesnt exist", async () => {});
   });
+
+  xdescribe("rejects wrong fulfiller", () => {});
+
+  xdescribe("mint again after burn", () => {});
+
+  xdescribe("updates discount on purchase", () => {});
+
+  xdescribe("updates on collectors only", () => {});
+
+  xdescribe("only lets correct creator update", () => {});
 });
