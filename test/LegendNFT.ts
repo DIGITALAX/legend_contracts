@@ -542,19 +542,35 @@ describe("LegendNFT + LegendCollection", function () {
     });
   });
 
-  xdescribe("burn tokens", () => {
+  describe("burn tokens", () => {
     beforeEach("buy from marketplace", async () => {
-      // mint a second collection
-      await legendCollection.mintCollection(
-        "second_uri",
-        15,
-        collection_name,
-        acceptedTokens,
-        basePrices
+      await legendFactory
+        .connect(secondWriter)
+        .createContracts(pubId, profileId, {
+          lensHubProxyAddress: legendFactory.address,
+          legendFactoryAddress: legendFactory.address,
+          URIArrayValue: URIArray,
+          grantNameValue: grantName,
+          editionAmountValue: editionAmount,
+        });
+
+      // mint another collection
+      await legendCollection.connect(secondWriter).mintCollection(
+        amount,
+        {
+          acceptedTokens,
+          basePrices,
+          uri: "burnurivalue",
+          printType,
+          fulfillerId: 1,
+          discount: 20,
+          grantCollectorsOnly: false,
+        },
+        grantName
       );
 
       // add collection to a drop
-      await legendDrop.createDrop([1, 2], "drop_uri");
+      await legendDrop.connect(secondWriter).createDrop([2], "drop_uri");
 
       // approve allowance
       await token
@@ -566,12 +582,12 @@ describe("LegendNFT + LegendCollection", function () {
 
       await legendMarketplace
         .connect(nonAdmin)
-        .buyTokens([1, 2, 13], token.address);
+        .buyTokens([1, 2, 13], token.address, "fulfillmentdetails");
     });
 
     it("it should burn a token as buyer / owner and emit event", async () => {
       expect(await legendNFT.connect(nonAdmin).burn(1))
-        .to.emit("TokenBurned")
+        .to.emit(legendNFT, "TokenBurned")
         .withArgs(1);
     });
 
@@ -588,15 +604,35 @@ describe("LegendNFT + LegendCollection", function () {
       expect(await legendNFT.getTokenIsBurned(13)).to.equal(true);
     });
 
-    xdescribe("it should be set as burn from collection level", () => {
+    describe("it should be set as burn from collection level", () => {
       beforeEach("burn collection", async () => {
-        expect(await legendCollection.burnCollection(2))
-          .to.emit("CollectionBurned")
-          .withArgs(admin.address, 2);
+        expect(await legendCollection.connect(secondWriter).burnCollection(2))
+          .to.emit(legendCollection, "CollectionBurned")
+          .withArgs(secondWriter.address, 2);
       });
 
       it("it should be set as burn from collection level", async () => {
         expect(await legendCollection.getCollectionIsBurned(2)).to.equal(true);
+      });
+
+      it("should be able to purchase and mint another collection after burning", async () => {
+        const tx = await legendCollection.connect(writer).mintCollection(
+          amount,
+          {
+            acceptedTokens,
+            basePrices,
+            uri: "burnurivalue",
+            printType,
+            fulfillerId: 1,
+            discount: 20,
+            grantCollectorsOnly: false,
+          },
+          grantName
+        );
+        const collId = await legendCollection.getCollectionSupply();
+        expect(tx)
+          .to.emit(legendCollection, "CollectionMinted")
+          .withArgs(collId, "burnurivalue", amount, writer.address);
       });
     });
 
