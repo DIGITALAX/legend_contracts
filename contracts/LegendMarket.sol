@@ -116,9 +116,9 @@ contract LegendMarket {
         string memory _fulfillmentDetails
     ) external {
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            if (_legendNFT.getGrantCollectorsOnly(_tokenIds[i])) {
+            if (_legendNFT.getTokenGrantCollectorsOnly(_tokenIds[i])) {
                 require(
-                    IDynamicNFT(_legendNFT.getDynamicNFTAddress(_tokenIds[i]))
+                    IDynamicNFT(_legendNFT.getTokenDynamicNFTAddress(_tokenIds[i]))
                         .getCollectorClaimedNFT(msg.sender),
                     "LegendMarket: Must be authorized grant collector."
                 );
@@ -158,14 +158,14 @@ contract LegendMarket {
                     prices[i] = _legendNFT.getBasePrices(_tokenIds[i])[j];
 
                     if (
-                        _legendNFT.getDiscount(_tokenIds[i]) != 0 &&
+                        _legendNFT.getTokenDiscount(_tokenIds[i]) != 0 &&
                         IDynamicNFT(
-                            _legendNFT.getDynamicNFTAddress(_tokenIds[i])
+                            _legendNFT.getTokenDynamicNFTAddress(_tokenIds[i])
                         ).getCollectorClaimedNFT(msg.sender)
                     ) {
                         totalPrice +=
                             prices[i] *
-                            _legendNFT.getDiscount(_tokenIds[i]);
+                            _legendNFT.getTokenDiscount(_tokenIds[i]);
                     } else {
                         totalPrice += prices[i];
                     }
@@ -186,7 +186,7 @@ contract LegendMarket {
         );
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            uint256 _fulfillerId = _legendNFT.getFulfillerId(_tokenIds[i]);
+            uint256 _fulfillerId = _legendNFT.getTokenFulfillerId(_tokenIds[i]);
             IERC20(_chosenTokenAddress).transferFrom(
                 msg.sender,
                 _legendNFT.getTokenCreator(_tokenIds[i]),

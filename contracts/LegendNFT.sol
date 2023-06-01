@@ -273,11 +273,11 @@ contract LegendNFT is ERC721Enumerable {
         return _tokens[_tokenId].collectionId;
     }
 
-    function getDiscount(uint256 _tokenId) public view returns (uint256) {
+    function getTokenDiscount(uint256 _tokenId) public view returns (uint256) {
         return _discount[_tokenId];
     }
 
-    function getGrantCollectorsOnly(uint256 _tokenId)
+    function getTokenGrantCollectorsOnly(uint256 _tokenId)
         public
         view
         returns (bool)
@@ -297,7 +297,7 @@ contract LegendNFT is ERC721Enumerable {
         return _tokens[_tokenId].tokenId;
     }
 
-    function getPrintType(uint256 _tokenId)
+    function getTokenPrintType(uint256 _tokenId)
         public
         view
         returns (string memory)
@@ -305,7 +305,7 @@ contract LegendNFT is ERC721Enumerable {
         return _printType[_tokenId];
     }
 
-    function getDynamicNFTAddress(uint256 _tokenId)
+    function getTokenDynamicNFTAddress(uint256 _tokenId)
         public
         view
         returns (address)
@@ -313,11 +313,11 @@ contract LegendNFT is ERC721Enumerable {
         return _dynamicNFTAddress[_tokenId];
     }
 
-    function getFulfillerId(uint256 _tokenId) public view returns (uint256) {
+    function getTokenFulfillerId(uint256 _tokenId) public view returns (uint256) {
         return _fulfillerId[_tokenId];
     }
 
-    function getPubId(uint256 _tokenId) public view returns (uint256) {
+    function getTokenPubId(uint256 _tokenId) public view returns (uint256) {
         return _pubId[_tokenId];
     }
 

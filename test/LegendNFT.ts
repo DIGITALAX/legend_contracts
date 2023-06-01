@@ -15,6 +15,7 @@ describe("LegendNFT + LegendCollection", function () {
     legendNFT: Contract,
     legendMarketplace: Contract,
     legendDrop: Contract,
+    legendDynamicNFT: Contract,
     legendPayment: Contract,
     admin: SignerWithAddress,
     writer: SignerWithAddress,
@@ -58,6 +59,9 @@ describe("LegendNFT + LegendCollection", function () {
       "LegendFulfillment"
     );
     const LegendFactory = await ethers.getContractFactory("LegendFactory");
+    const LegendDynamicNFT = await ethers.getContractFactory(
+      "LegendDynamicNFT"
+    );
 
     accessControl = await GlobalAccessControl.deploy(
       "GlobalLegendAccessControl",
@@ -158,9 +162,18 @@ describe("LegendNFT + LegendCollection", function () {
       editionAmountValue: editionAmount,
     };
 
-    await legendFactory
+    const tx = await legendFactory
       .connect(writer)
       .createContracts(pubId, profileId, myStruct);
+    const receipt = await tx.wait();
+
+    const event = receipt.events.find(
+      (event: any) => event.event === "FactoryDeployed"
+    );
+
+    const eventData = await event.args;
+
+    legendDynamicNFT = LegendDynamicNFT.attach(eventData.dynamicNFTAddress);
   });
 
   let tx: any,
@@ -213,7 +226,7 @@ describe("LegendNFT + LegendCollection", function () {
     });
 
     it("has a correct nft total supply", async () => {
-      expect(await legendNFT.totalSupply()).to.equal(amount);
+      expect(await legendNFT.getTotalSupplyCount()).to.equal(amount);
     });
 
     it("has a correct collection id", async () => {
@@ -224,9 +237,10 @@ describe("LegendNFT + LegendCollection", function () {
       for (let i = 1; i < amount; i++) {
         expect(await legendNFT.tokenURI(i)).to.equal(uri);
       }
+      expect(await legendCollection.getCollectionURI(1)).to.equal(uri);
     });
 
-    it("has correct id for all minted tokens", async () => {
+    it("has correct id for all minted tokens and collection", async () => {
       for (let i = 1; i < amount; i++) {
         expect(await legendNFT.getTokenId(i)).to.equal(i);
       }
@@ -236,6 +250,9 @@ describe("LegendNFT + LegendCollection", function () {
       expect(await legendCollection.getCollectionCreator(1)).to.equal(
         writer.address
       );
+      for (let i = 1; i < amount; i++) {
+        expect(await legendNFT.getTokenCreator(i)).to.equal(writer.address);
+      }
     });
 
     it("collection includes correct token ids", async () => {
@@ -259,19 +276,23 @@ describe("LegendNFT + LegendCollection", function () {
       }
     });
 
-    it("creator to be minter for collection + nfts", async () => {
-      for (let i = 1; i < amount; i++) {
-        expect(await legendNFT.getTokenCreator(i)).to.equal(writer.address);
-      }
+    it("collection amount is correct", async () => {
+      expect(await legendCollection.getCollectionAmount(1)).to.equal(amount);
     });
 
     it("accepted tokens for all", async () => {
+      const expectedTokens = [
+        token.address,
+        "0x0000000000000000000000000000000000001010",
+        "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+      ].map((address) => address.toLowerCase());
+      const actualTokens = (
+        await legendCollection.getCollectionAcceptedTokens(1)
+      ).map((address: string) => address.toLowerCase());
+
+      expect(actualTokens).to.deep.equal(expectedTokens);
+
       for (let i = 1; i < amount; i++) {
-        const expectedTokens = [
-          token.address,
-          "0x0000000000000000000000000000000000001010",
-          "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
-        ].map((address) => address.toLowerCase());
         const actualTokens = (await legendNFT.getTokenAcceptedTokens(i)).map(
           (address: string) => address.toLowerCase()
         );
@@ -280,6 +301,12 @@ describe("LegendNFT + LegendCollection", function () {
     });
 
     it("accepted prices for all", async () => {
+      expect(await legendCollection.getCollectionBasePrices(1)).to.eql([
+        BigNumber.from("200000000000000000"),
+        BigNumber.from("1200000000000000000"),
+        BigNumber.from("200000000000000000"),
+      ]);
+
       for (let i = 1; i < amount; i++) {
         expect(await legendNFT.getBasePrices(i)).to.eql([
           BigNumber.from("200000000000000000"),
@@ -290,6 +317,7 @@ describe("LegendNFT + LegendCollection", function () {
     });
 
     it("is burn is false for all", async () => {
+      expect(await legendCollection.getCollectionIsBurned(1)).to.equal(false);
       for (let i = 1; i < amount; i++) {
         expect(await legendNFT.getTokenIsBurned(i)).to.equal(false);
       }
@@ -297,11 +325,77 @@ describe("LegendNFT + LegendCollection", function () {
 
     it("correct timestamp for all", async () => {
       const block = await ethers.provider.getBlock(blockNumber);
+      expect(await legendCollection.getCollectionTimestamp(1)).to.equal(
+        block.timestamp
+      );
+
       for (let i = 1; i < amount; i++) {
         expect(await legendNFT.getTokenTimestamp(i)).to.equal(block.timestamp);
       }
     });
+
+    it("correct discount for all", async () => {
+      expect(await legendCollection.getCollectionDiscount(1)).to.equal(10);
+      for (let i = 1; i < amount; i++) {
+        expect(await legendNFT.getTokenDiscount(i)).to.equal(10);
+      }
+    });
+
+    it("correct collectors only for all", async () => {
+      expect(
+        await legendCollection.getCollectionGrantCollectorsOnly(1)
+      ).to.equal(true);
+      for (let i = 1; i < amount; i++) {
+        expect(await legendNFT.getTokenGrantCollectorsOnly(i)).to.equal(true);
+      }
+    });
+
+    it("correct pubId for all", async () => {
+      expect(await legendCollection.getCollectionPubId(1)).to.equal(pubId);
+      for (let i = 1; i < amount; i++) {
+        expect(await legendNFT.getTokenPubId(i)).to.equal(pubId);
+      }
+    });
+
+    it("correct dynamicNFTAddress for all", async () => {
+      expect(await legendCollection.getCollectionDynamicNFTAddress(1)).to.equal(
+        legendDynamicNFT.address
+      );
+      for (let i = 1; i < amount; i++) {
+        expect(await legendNFT.getTokenDynamicNFTAddress(i)).to.equal(
+          legendDynamicNFT.address
+        );
+      }
+    });
+
+    it("correct print type for all", async () => {
+      expect(await legendCollection.getCollectionPrintType(1)).to.equal(
+        printType
+      );
+      for (let i = 1; i < amount; i++) {
+        expect(await legendNFT.getTokenPrintType(i)).to.equal(printType);
+      }
+    });
+
+    it("correct fulfiller id for all", async () => {
+      expect(await legendCollection.getCollectionFulfillerId(1)).to.equal(1);
+      for (let i = 1; i < amount; i++) {
+        expect(await legendNFT.getTokenFulfillerId(i)).to.equal(1);
+      }
+    });
+
+    it("correct drop id for all", async () => {
+      expect(await legendCollection.getCollectionDropId(1)).to.equal(0);
+    });
   });
+
+  // correctly updates drop, print etc.
+  // correctly mints again after edit
+  // correctly mints again after burn
+  // correctly updates discount / buyers after discount / collectors only
+  // rejects on wrong fulfiller etc.
+  // only lets correct creators update
+  // add collection to drop for drop id
 
   describe("it should reject for all requires", () => {
     it("rejects on non grant writer", async () => {

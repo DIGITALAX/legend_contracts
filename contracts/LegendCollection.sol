@@ -561,7 +561,7 @@ contract LegendCollection {
         return _discount[_collectionId];
     }
 
-    function getDynamicNFTAddress(uint256 _collectionId)
+    function getCollectionDynamicNFTAddress(uint256 _collectionId)
         public
         view
         returns (address)
@@ -569,7 +569,7 @@ contract LegendCollection {
         return _dynamicNFTAddress[_collectionId];
     }
 
-    function getPubId(uint256 _collectionId) public view returns (uint256) {
+    function getCollectionPubId(uint256 _collectionId) public view returns (uint256) {
         return _pubId[_collectionId];
     }
 
@@ -644,8 +644,12 @@ contract LegendCollection {
 
     function setCollectionDropId(uint256 _dropId, uint256 _collectionId)
         external
-        onlyCreator(_collectionId)
     {
+        require(
+            msg.sender == address(_legendDrop) ||
+                msg.sender == _collections[_collectionId].creator,
+            "LegendCollection: Only the collection creator or drop contract can update."
+        );
         _collections[_collectionId].dropId = _dropId;
         emit CollectionDropIdUpdated(_collectionId, _dropId, msg.sender);
     }
