@@ -133,3 +133,4 @@ describe("LegendDynamicNFT", function () {
 });
 
 // test live the update metadata & collector mint & collector address
+// updates the grant status
