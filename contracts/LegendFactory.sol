@@ -8,6 +8,7 @@ import "./GlobalLegendAccessControl.sol";
 
 contract LegendFactory {
     GlobalLegendAccessControl private _accessControl;
+    ILensHubProxy private _lensHubProxyAddressValue;
     string public name;
     string public symbol;
 
@@ -98,7 +99,8 @@ contract LegendFactory {
             args,
             address(newLegendAccessControl),
             address(this),
-            _grantDeployer
+            _grantDeployer,
+            address(_lensHubProxyAddressValue)
         );
 
         // Deploy LegendKeeper
@@ -106,7 +108,7 @@ contract LegendFactory {
             args.editionAmountValue,
             _pubId,
             _profileId,
-            args.lensHubProxyAddress,
+            address(_lensHubProxyAddressValue),
             address(newLegendDynamicNFT),
             address(newLegendAccessControl),
             _grantDeployer,
@@ -223,5 +225,13 @@ contract LegendFactory {
     ) external onlyDynamicNFT(_deployerAddress, _grantName, msg.sender) {
         _deployerToGrant[_deployerAddress][_grantName].status = _newStatus;
         emit GrantStatusUpdated(_deployerAddress, _newStatus);
+    }
+
+    function setLensHubProxy(address _newAddress) external onlyAdmin {
+        _lensHubProxyAddressValue = ILensHubProxy(_newAddress);
+    }
+
+    function getLensHubProxy() public view returns (address) {
+        return address(_lensHubProxyAddressValue);
     }
 }

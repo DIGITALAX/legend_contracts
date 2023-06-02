@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 chai.use(solidity);
 const { expect } = chai;
 
-xdescribe("LegendDrop", () => {
+describe("LegendDrop", () => {
   let accessControl: Contract,
     legendEscrow: Contract,
     legendCollection: Contract,
@@ -178,14 +178,12 @@ xdescribe("LegendDrop", () => {
   });
 
   let uri: string,
-    collection_name: string,
     amount: number,
     acceptedTokens: string[],
     basePrices: string[];
 
   beforeEach("mint the collection", async () => {
     uri = "ipfs://newtoken";
-    collection_name = "collection one";
     amount = 10;
     acceptedTokens = [
       token.address,

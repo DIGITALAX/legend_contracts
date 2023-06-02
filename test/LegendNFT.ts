@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 chai.use(solidity);
 const { expect } = chai;
 
-xdescribe("LegendNFT + LegendCollection", function () {
+describe("LegendNFT + LegendCollection", function () {
   let accessControl: Contract,
     legendEscrow: Contract,
     legendCollection: Contract,
@@ -179,7 +179,6 @@ xdescribe("LegendNFT + LegendCollection", function () {
 
   let tx: any,
     uri: string,
-    collection_name: string,
     amount: number,
     acceptedTokens: string[],
     blockNumber: number,

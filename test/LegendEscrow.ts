@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 chai.use(solidity);
 const { expect } = chai;
 
-xdescribe("LegendEscrow", function () {
+describe("LegendEscrow", function () {
   let accessControl: Contract,
     legendEscrow: Contract,
     legendCollection: Contract,
