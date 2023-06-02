@@ -1,11 +1,9 @@
 // test/LegendDynamicNFT.spec.ts
-
 import { ethers } from "hardhat";
 import { Contract } from "ethers";
 import { solidity } from "ethereum-waffle";
 import chai from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-
 chai.use(solidity);
 const { expect } = chai;
 

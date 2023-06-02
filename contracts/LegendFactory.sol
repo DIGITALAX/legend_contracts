@@ -88,7 +88,7 @@ contract LegendFactory {
 
         // Deploy LegendAccessControl
         LegendAccessControl newLegendAccessControl = new LegendAccessControl(
-            "Legend AccessControl",
+            "LegendAccessControl",
             "LAC",
             _grantDeployer
         );
@@ -110,7 +110,7 @@ contract LegendFactory {
             address(newLegendDynamicNFT),
             address(newLegendAccessControl),
             _grantDeployer,
-            "Legend Keeper",
+            "LegendKeeper",
             "LKEEP"
         );
 

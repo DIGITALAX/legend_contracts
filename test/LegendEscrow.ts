@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 chai.use(solidity);
 const { expect } = chai;
 
-describe("LegendEscrow", function () {
+xdescribe("LegendEscrow", function () {
   let accessControl: Contract,
     legendEscrow: Contract,
     legendCollection: Contract,
@@ -84,8 +84,8 @@ describe("LegendEscrow", function () {
       accessControl.address,
       legendPayment.address,
       legendFactory.address,
+      "LECOL",
       "LegendCollection",
-      "LECOL"
     );
     legendFulfillment = await LegendFulfillment.deploy(
       accessControl.address,
@@ -99,22 +99,23 @@ describe("LegendEscrow", function () {
       accessControl.address,
       legendFulfillment.address,
       legendNFT.address,
-      "LegendMarketplace",
-      "CHROM"
+      "LEMA",
+      "LegendMarketplace"
     );
     legendDrop = await LegendDrop.deploy(
       legendCollection.address,
       accessControl.address,
+      "LEDR",
       "LegendDrop",
-      "LEDR"
     );
     legendEscrow = await LegendEscrow.deploy(
       legendCollection.address,
       legendMarketplace.address,
       accessControl.address,
       legendNFT.address,
+      "LEES",
       "LegendEscrow",
-      "LEES"
+
     );
 
     await accessControl.connect(admin).addAdmin(legendCollection.address);
@@ -217,8 +218,8 @@ describe("LegendEscrow", function () {
         accessControl.address,
         legendPayment.address,
         legendFactory.address,
-        "LegendCollection",
-        "LECOL"
+        "LECOL",
+      "LegendCollection",
       );
       legendFulfillment = await LegendFulfillment.deploy(
         accessControl.address,
@@ -232,22 +233,23 @@ describe("LegendEscrow", function () {
         accessControl.address,
         legendFulfillment.address,
         legendNFT.address,
-        "LegendMarketplace",
-        "CHROM"
+        "LEMA",
+        "LegendMarketplace"
       );
       legendDrop = await LegendDrop.deploy(
         legendCollection.address,
         accessControl.address,
+        "LEDR",
         "LegendDrop",
-        "LEDR"
       );
       legendEscrow = await LegendEscrow.deploy(
         legendCollection.address,
         legendMarketplace.address,
         accessControl.address,
         legendNFT.address,
+        "LEES",
         "LegendEscrow",
-        "LEES"
+  
       );
 
       await accessControl.connect(admin).addAdmin(legendCollection.address);

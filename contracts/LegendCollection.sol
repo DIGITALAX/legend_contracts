@@ -234,13 +234,15 @@ contract LegendCollection {
         MintParamsLibrary.MintParams memory params,
         string memory _grantName
     ) external onlyGrantPublishers(msg.sender, _grantName) {
+        address _creator = msg.sender;
+        
         require(
             params.basePrices.length == params.acceptedTokens.length,
             "LegendCollection: Invalid input"
         );
         require(
-            _accessControl.isAdmin(msg.sender) ||
-                _accessControl.isWriter(msg.sender),
+            _accessControl.isAdmin(_creator) ||
+                _accessControl.isWriter(_creator),
             "LegendCollection: Only admin or writer can perform this action"
         );
         require(
@@ -264,14 +266,14 @@ contract LegendCollection {
         }
 
         uint256 _pubIdValue = ILegendKeeper(
-            _legendFactory.getGrantContracts(msg.sender, _grantName)[0]
+            _legendFactory.getGrantContracts(_creator, _grantName)[0]
         ).getPostId();
         address _dynamicNFTAddressValue = _legendFactory.getGrantContracts(
-            msg.sender,
+            _creator,
             _grantName
         )[2];
 
-        _createNewCollection(params, _amount, tokenIds, msg.sender);
+        _createNewCollection(params, _amount, tokenIds, _creator);
 
         _setMappings(params, _pubIdValue, _dynamicNFTAddressValue);
 
@@ -280,14 +282,14 @@ contract LegendCollection {
             _pubIdValue,
             _amount,
             _dynamicNFTAddressValue,
-            msg.sender
+            _creator
         );
 
         emit CollectionMinted(
             _collectionSupply,
             params.uri,
             _amount,
-            msg.sender
+            _creator
         );
     }
 

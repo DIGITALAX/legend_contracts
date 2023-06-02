@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "./LegendCollection.sol";
 import "./GlobalLegendAccessControl.sol";
+import "hardhat/console.sol";
 
 contract LegendDrop {
     GlobalLegendAccessControl private _accessControl;
@@ -62,14 +63,14 @@ contract LegendDrop {
                     msg.sender,
                 "LegendDrop: Only the owner of a collection can add it to a drop"
             );
-            _;
         }
+        _;
     }
 
     modifier onlyAdmin() {
         require(
             _accessControl.isAdmin(msg.sender),
-            "AccessControl: Only admin can perform this action"
+            "GlobalLegendAccessControl: Only admin can perform this action"
         );
         _;
     }
@@ -100,7 +101,8 @@ contract LegendDrop {
             );
             require(
                 _collectionIds[i] != 0 &&
-                    _collectionIds[i] <= _legendCollection.getCollectionSupply(),
+                    _collectionIds[i] <=
+                    _legendCollection.getCollectionSupply(),
                 "LegendDrop: Collection does not exist"
             );
             require(
@@ -137,17 +139,16 @@ contract LegendDrop {
         uint256[] memory _collectionIds
     ) external onlyCreator(_collectionIds) {
         require(_drops[_dropId].dropId != 0, "LegendDrop: Drop does not exist");
-        for (uint256 i; i < _collectionIds.length; i++) {
+        for (uint256 i = 0; i < _collectionIds.length; i++) {
             require(
-                _collectionIdToDrop[_collectionIds[i]] == 0 ||
-                    _collectionIdToDrop[_collectionIds[i]] == _dropId,
+                _collectionIdToDrop[_collectionIds[i]] == 0,
                 "LegendDrop: Collection is already part of another existing drop"
             );
         }
 
-        for (uint256 i; i < _collectionIds.length; i++) {
+        for (uint256 i = 0; i < _collectionIds.length; i++) {
             _drops[_dropId].collectionIds.push(_collectionIds[i]);
-            _collectionIdToDrop[_collectionIds[i]] = _dropSupply;
+            _collectionIdToDrop[_collectionIds[i]] = _dropId;
             _legendCollection.setCollectionDropId(_dropId, _collectionIds[i]);
         }
 
@@ -256,6 +257,14 @@ contract LegendDrop {
         return _drops[_dropId].collectionIds;
     }
 
+    function getCollectionIdToDrop(uint256 _collectionId)
+        public
+        view
+        returns (uint256)
+    {
+        return _collectionIdToDrop[_collectionId];
+    }
+
     function getDropURI(uint256 _dropId) public view returns (string memory) {
         return _drops[_dropId].dropURI;
     }
@@ -282,5 +291,17 @@ contract LegendDrop {
         }
         _drops[_dropId].dropURI = _dropURI;
         emit DropURIUpdated(_dropId, _dropURI);
+    }
+
+    function getLegendCollectionContract() public view returns (address) {
+        return address(_legendCollection);
+    }
+
+    function getAccessControlContract() public view returns (address) {
+        return address(_accessControl);
+    }
+
+    function getDropSupply() public view returns (uint256) {
+        return _dropSupply;
     }
 }

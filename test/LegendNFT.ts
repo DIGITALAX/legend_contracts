@@ -84,8 +84,8 @@ xdescribe("LegendNFT + LegendCollection", function () {
       accessControl.address,
       legendPayment.address,
       legendFactory.address,
-      "LegendCollection",
-      "LECOL"
+      "LECOL",
+      "LegendCollection"
     );
     legendFulfillment = await LegendFulfillment.deploy(
       accessControl.address,
@@ -99,22 +99,22 @@ xdescribe("LegendNFT + LegendCollection", function () {
       accessControl.address,
       legendFulfillment.address,
       legendNFT.address,
-      "LegendMarketplace",
-      "CHROM"
+      "LEMA",
+      "LegendMarketplace"
     );
     legendDrop = await LegendDrop.deploy(
       legendCollection.address,
       accessControl.address,
-      "LegendDrop",
-      "LEDR"
+      "LEDR",
+      "LegendDrop"
     );
     legendEscrow = await LegendEscrow.deploy(
       legendCollection.address,
       legendMarketplace.address,
       accessControl.address,
       legendNFT.address,
-      "LegendEscrow",
-      "LEES"
+      "LEES",
+      "LegendEscrow"
     );
 
     await accessControl.connect(admin).addAdmin(legendCollection.address);
@@ -669,8 +669,8 @@ xdescribe("LegendNFT + LegendCollection", function () {
         accessControl.address,
         legendPayment.address,
         legendFactory.address,
-        "LegendCollection",
-        "LECO"
+        "LECOL",
+        "LegendCollection"
       );
       legendFulfillment = await LegendFulfillment.deploy(
         accessControl.address,
@@ -684,22 +684,22 @@ xdescribe("LegendNFT + LegendCollection", function () {
         accessControl.address,
         legendFulfillment.address,
         legendNFT.address,
-        "LegendMarketplace",
-        "LEMA"
+        "LEMA",
+        "LegendMarketplace"
       );
       legendDrop = await LegendDrop.deploy(
         legendCollection.address,
         accessControl.address,
-        "LegendDrop",
-        "LEDR"
+        "LEDR",
+        "LegendDrop"
       );
       legendEscrow = await LegendEscrow.deploy(
         legendCollection.address,
         legendMarketplace.address,
         accessControl.address,
         legendNFT.address,
-        "LegendEscrow",
-        "LEES"
+        "LEES",
+        "LegendEscrow"
       );
 
       accessControl.connect(admin).addAdmin(legendFactory.address);
