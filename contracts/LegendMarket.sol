@@ -71,16 +71,32 @@ contract LegendMarket {
         address indexed newLegendEscrow,
         address updater
     );
+    event LegendFulfillmentUpdated(
+        address indexed oldLegendFulfillment,
+        address indexed newLegendFulfillment,
+        address updater
+    );
     event TokensBought(
         uint256[] tokenIds,
         address buyer,
         address chosenAddress
     );
+    event OrderIsFulfilled(uint256 indexed _orderId, address _fulfillerAddress);
 
     event OrderCreated(
         uint256 indexed orderId,
         address buyer,
         string fulfillmentInformation
+    );
+    event UpdateOrderDetails(
+        uint256 indexed _orderId,
+        string newOrderDetails,
+        address buyer
+    );
+    event UpdateOrderStatus(
+        uint256 indexed _orderId,
+        string newOrderStatus,
+        address buyer
     );
 
     event FulfillerAddressUpdated(
@@ -164,10 +180,6 @@ contract LegendMarket {
                             _legendNFT.getTokenDynamicNFTAddress(_tokenIds[i])
                         ).getCollectorClaimedNFT(msg.sender)
                     ) {
-                        require(
-                            _legendNFT.getTokenDiscount(_tokenIds[i]) < 100,
-                            "LegendMarket: Discount cannot exceed 100."
-                        );
                         totalPrice +=
                             prices[i] -
                             ((prices[i] *
@@ -273,6 +285,19 @@ contract LegendMarket {
         emit LegendNFTUpdated(oldAddress, _newLegendNFTAddress, msg.sender);
     }
 
+    function updateLegendFulfillment(address _newLegendFulfillmentAddress)
+        external
+        onlyAdmin
+    {
+        address oldAddress = address(_legendFulfillment);
+        _legendFulfillment = LegendFulfillment(_newLegendFulfillmentAddress);
+        emit LegendFulfillmentUpdated(
+            oldAddress,
+            _newLegendFulfillmentAddress,
+            msg.sender
+        );
+    }
+
     function setLegendEscrow(address _newLegendEscrowAddress)
         external
         onlyAdmin
@@ -359,6 +384,7 @@ contract LegendMarket {
         onlyFulfiller(_orders[_orderId].fulfillerId)
     {
         _orders[_orderId].isFulfilled = true;
+        emit OrderIsFulfilled(_orderId, msg.sender);
     }
 
     function setOrderStatus(uint256 _orderId, string memory _status)
@@ -366,6 +392,7 @@ contract LegendMarket {
         onlyFulfiller(_orders[_orderId].fulfillerId)
     {
         _orders[_orderId].status = _status;
+        emit UpdateOrderStatus(_orderId, _status, msg.sender);
     }
 
     function setOrderDetails(uint256 _orderId, string memory _newDetails)
@@ -376,5 +403,26 @@ contract LegendMarket {
             "LegendMarket: Only the buyer can update their order details."
         );
         _orders[_orderId].details = _newDetails;
+        emit UpdateOrderDetails(_orderId, _newDetails, msg.sender);
+    }
+
+    function getAccessControlContract() public view returns (address) {
+        return address(_accessControl);
+    }
+
+    function getLegendEscrowContract() public view returns (address) {
+        return address(_legendEscrow);
+    }
+
+    function getLegendCollectionContract() public view returns (address) {
+        return address(_legendCollection);
+    }
+
+    function getLegendNFTContract() public view returns (address) {
+        return address(_legendNFT);
+    }
+
+    function getLegendFulfillmentContract() public view returns (address) {
+        return address(_legendFulfillment);
     }
 }

@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 
 import "./LegendCollection.sol";
 import "./GlobalLegendAccessControl.sol";
-import "hardhat/console.sol";
 
 contract LegendDrop {
     GlobalLegendAccessControl private _accessControl;

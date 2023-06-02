@@ -130,6 +130,10 @@ contract LegendNFT is ERC721Enumerable {
         address _dynamicNFTAddressValue,
         address _creatorAddress
     ) public onlyCollectionContract {
+        require(
+            params.discount < 100,
+            "LegendMarket: Discount cannot exceed 100."
+        );
         uint256[] memory tokenIds = new uint256[](_amount);
         for (uint256 i = 0; i < _amount; i++) {
             _totalSupplyCount += 1;
@@ -313,7 +317,11 @@ contract LegendNFT is ERC721Enumerable {
         return _dynamicNFTAddress[_tokenId];
     }
 
-    function getTokenFulfillerId(uint256 _tokenId) public view returns (uint256) {
+    function getTokenFulfillerId(uint256 _tokenId)
+        public
+        view
+        returns (uint256)
+    {
         return _fulfillerId[_tokenId];
     }
 
@@ -398,6 +406,10 @@ contract LegendNFT is ERC721Enumerable {
         public
         onlyCollectionContract
     {
+        require(
+            _newDiscount < 100,
+            "LegendMarket: Discount cannot exceed 100."
+        );
         _discount[_tokenId] = _newDiscount;
         emit TokenDiscountUpdated(_tokenId, _newDiscount, msg.sender);
     }
