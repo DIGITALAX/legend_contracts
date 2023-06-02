@@ -11,9 +11,7 @@ contract LegendFulfillment {
     LegendNFT private _legendNFT;
     GlobalLegendAccessControl private _accessControl;
     LegendCollection private _legendCollection;
-    uint256 private _orderSupply;
     uint256 private _fullfillerCount;
-    uint256[] private _fulfillmentOracle;
     string public symbol;
     string public name;
 
@@ -68,7 +66,15 @@ contract LegendFulfillment {
     modifier onlyAdmin() {
         require(
             _accessControl.isAdmin(msg.sender),
-            "AccessControl: Only admin can perform this action"
+            "GlobalLegendAccessControl: Only admin can perform this action"
+        );
+        _;
+    }
+
+    modifier onlyFulfiller(uint256 _fulfillerId) {
+        require(
+            msg.sender == _fulfillers[_fulfillerId].fulfillerAddress,
+            "LegendFulfillment: Only the fulfiller can update."
         );
         _;
     }
@@ -92,6 +98,10 @@ contract LegendFulfillment {
         uint256 _fulfillerPercent,
         address _fulfillerAddress
     ) external onlyAdmin {
+        require(
+            _fulfillerPercent < 100,
+            "LegendFulfillment: Percent can not be greater than 100."
+        );
         _fullfillerCount++;
 
         Fulfiller memory newFulfiller = Fulfiller({
@@ -144,7 +154,11 @@ contract LegendFulfillment {
     function updateFulfillerPercent(
         uint256 _fulfillerId,
         uint256 _fulfillerPercent
-    ) public {
+    ) public onlyFulfiller(_fulfillerId) {
+        require(
+            _fulfillerId <= _fullfillerCount,
+            "LegendFulfillment: Fulfiller does not exist."
+        );
         _fulfillers[_fulfillerId].fulfillerPercent = _fulfillerPercent;
         emit FulfillerPercentUpdated(_fulfillerId, _fulfillerPercent);
     }
@@ -160,7 +174,11 @@ contract LegendFulfillment {
     function updateFulfillerAddress(
         uint256 _fulfillerId,
         address _fulfillerAddress
-    ) public {
+    ) public onlyFulfiller(_fulfillerId) {
+        require(
+            _fulfillerId <= _fullfillerCount,
+            "LegendFulfillment: Fulfiller does not exist."
+        );
         _fulfillers[_fulfillerId].fulfillerAddress = _fulfillerAddress;
         emit FulfillerAddressUpdated(_fulfillerId, _fulfillerAddress);
     }
@@ -171,5 +189,21 @@ contract LegendFulfillment {
         returns (address)
     {
         return _fulfillers[_fulfillerId].fulfillerAddress;
+    }
+
+    function getFulfillerCount() public view returns (uint256) {
+        return _fullfillerCount;
+    }
+
+    function getLegendNFTContract() public view returns (address) {
+        return address(_legendNFT);
+    }
+
+    function getLegendCollectionContract() public view returns (address) {
+        return address(_legendCollection);
+    }
+
+    function getAccessControlContract() public view returns (address) {
+        return address(_accessControl);
     }
 }
