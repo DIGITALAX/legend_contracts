@@ -5,7 +5,6 @@ import "./LegendKeeper.sol";
 import "./LegendAccessControl.sol";
 import "./LegendDynamicNFT.sol";
 import "./GlobalLegendAccessControl.sol";
-import "hardhat/console.sol";
 
 contract LegendFactory {
     GlobalLegendAccessControl private _accessControl;

@@ -1107,21 +1107,85 @@ describe("LegendNFT + LegendCollection", function () {
     });
   });
 
-  xdescribe("it updates fulfillment", () => {
-    it("updates fulfillment for nft + collection", async () => {});
+  describe("rejects wrong fulfiller", () => {
+    it("rejects on update", async () => {
+      await expect(
+        legendCollection.connect(writer).setCollectionFulfillerId(4, 1)
+      ).to.be.revertedWith("LegendFulfillment: FulfillerId does not exist.");
+    });
 
-    it("fails to update fulfillment in not collection contract", async () => {});
-
-    it("rejects fulfiller on update if doesnt exist", async () => {});
+    it("rejects on mint", async () => {
+      await expect(
+        legendCollection.connect(writer).mintCollection(
+          amount,
+          {
+            acceptedTokens,
+            basePrices,
+            uri: "newurivalue2",
+            printType,
+            fulfillerId: 6,
+            discount: 20,
+            grantCollectorsOnly: false,
+          },
+          grantName
+        )
+      ).to.be.revertedWith("LegendFulfillment: FulfillerId does not exist.");
+    });
   });
 
-  xdescribe("rejects wrong fulfiller", () => {});
+  describe("updates discount on purchase", () => {
+    it("purchase at discounted price after update, but discount not applied because not collector", async () => {
+      await legendCollection.connect(writer).mintCollection(
+        amount,
+        {
+          acceptedTokens,
+          basePrices,
+          uri: "newurivalue5",
+          printType,
+          fulfillerId: 1,
+          discount: 20,
+          grantCollectorsOnly: false,
+        },
+        grantName
+      );
 
-  xdescribe("mint again after burn", () => {});
+      const prevBalance = await token.balanceOf(nonAdmin.address);
 
-  xdescribe("updates discount on purchase", () => {});
+      await token
+        .connect(nonAdmin)
+        .approve(
+          legendMarketplace.address,
+          BigNumber.from("200000000000000000")
+        );
 
-  xdescribe("updates on collectors only", () => {});
+      await legendMarketplace
+        .connect(nonAdmin)
+        .buyTokens([15], token.address, "fulfillment details");
 
-  xdescribe("only lets correct creator update", () => {});
+      expect(await token.balanceOf(nonAdmin.address)).to.equal(
+        prevBalance.sub(BigNumber.from("200000000000000000"))
+      );
+
+      const prevBalanceUpdate = await token.balanceOf(nonAdmin.address);
+
+      await token
+        .connect(nonAdmin)
+        .approve(
+          legendMarketplace.address,
+          BigNumber.from("200000000000000000")
+        );
+
+      await legendMarketplace
+        .connect(nonAdmin)
+        .buyTokens([16], token.address, "fulfillment details");
+
+      expect(await token.balanceOf(nonAdmin.address)).to.equal(
+        prevBalanceUpdate.sub(BigNumber.from("200000000000000000"))
+      );
+    });
+  });
+
+  describe("updates on collectors only", () => {
+    it("rejects buyer on collectors updated to true", async () => {});
+  });
 });
