@@ -116,7 +116,7 @@ contract LegendEscrow is ERC721Holder {
         external
         onlyAdmin
     {
-        address oldAddress = address(_accessControl);
+        address oldAddress = address(_legendMarketplace);
         _legendMarketplace = LegendMarket(_newLegendMarketplace);
         emit LegendMarketplaceUpdated(
             oldAddress,

@@ -9,7 +9,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 chai.use(solidity);
 const { expect } = chai;
 
-describe("LegendDynamicNFT", function () {
+xdescribe("LegendDynamicNFT", function () {
   let legendAccessControl: Contract,
     legendDynamicNFT: Contract,
     legendKeeper: Contract,

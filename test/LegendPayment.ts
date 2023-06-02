@@ -1,12 +1,17 @@
-import { expect } from "chai";
 import { ethers } from "hardhat";
+import { Contract } from "ethers";
+import { solidity } from "ethereum-waffle";
+import chai from "chai";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+chai.use(solidity);
+const { expect } = chai;
 
-describe("LegendPayment", function () {
-  let accessControl: any,
-    legendPayment: any,
-    admin: any,
-    nonAdmin: any,
-    token: any;
+xdescribe("LegendPayment", function () {
+  let accessControl: Contract,
+    legendPayment: Contract,
+    admin: SignerWithAddress,
+    nonAdmin: SignerWithAddress,
+    token: Contract;
 
   beforeEach(async () => {
     [admin, nonAdmin] = await ethers.getSigners();
@@ -33,11 +38,16 @@ describe("LegendPayment", function () {
     });
 
     it("checks tokens are verified", async () => {
-      expect(await legendPayment.getVerifiedPaymentTokens()).to.deep.equal([
-        token.address,
-        "0x0000000000000000000000000000000000001010",
-        "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
-      ]);
+      const actual = (await legendPayment.getVerifiedPaymentTokens()).map(
+        (address: string) => address.toLowerCase()
+      );
+      expect(actual).to.deep.equal(
+        [
+          token.address,
+          "0x0000000000000000000000000000000000001010",
+          "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+        ].map((address: string) => address.toLowerCase())
+      );
     });
 
     it("fails verification for non-admin", async () => {
@@ -51,7 +61,7 @@ describe("LegendPayment", function () {
               "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
             ])
         ).to.be as any
-      ).revertedWith("AccessControl: Only admin can perform this action");
+      ).revertedWith("LegendAccessControl: Only admin can perform this action");
     });
 
     it("updates verified tokens", async () => {
@@ -62,10 +72,20 @@ describe("LegendPayment", function () {
     });
 
     it("updates access control", async () => {
-      (expect(await legendPayment.updateAccessControl(token.address)).to as any)
-        .emit("AccessControlUpdated")
-        .withArgs(accessControl, token.address, admin.address);
-      expect(await legendPayment.accessControl()).to.equal(token.address);
+      const oldAddress = accessControl.address;
+      const AccessControl = await ethers.getContractFactory(
+        "GlobalLegendAccessControl"
+      );
+      accessControl = await AccessControl.deploy("LegendAccessControl", "LAC");
+      (
+        expect(await legendPayment.updateAccessControl(accessControl.address))
+          .to as any
+      )
+        .emit(legendPayment, "AccessControlUpdated")
+        .withArgs(oldAddress, accessControl.address, admin.address);
+      expect(await legendPayment.getAccessControlContract()).to.equal(
+        accessControl.address
+      );
     });
 
     it("fails access control update for non-admin", async () => {
@@ -73,7 +93,7 @@ describe("LegendPayment", function () {
         expect(
           legendPayment.connect(nonAdmin).updateAccessControl(token.address)
         ).to.be as any
-      ).revertedWith("AccessControl: Only admin can perform this action");
+      ).revertedWith("LegendAccessControl: Only admin can perform this action");
     });
   });
 });

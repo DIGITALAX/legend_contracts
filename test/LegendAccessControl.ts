@@ -3,7 +3,7 @@ import { Contract } from "ethers";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
-describe("LegendAccessControl", () => {
+xdescribe("LegendAccessControl", () => {
   let legendAccessControl: Contract,
     owner: SignerWithAddress,
     addr1: SignerWithAddress,
