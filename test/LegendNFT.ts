@@ -1186,6 +1186,32 @@ describe("LegendNFT + LegendCollection", function () {
   });
 
   describe("updates on collectors only", () => {
-    it("rejects buyer on collectors updated to true", async () => {});
+    it("rejects buyer on collectors updated to true", async () => {
+      await legendCollection.connect(writer).mintCollection(
+        amount,
+        {
+          acceptedTokens,
+          basePrices,
+          uri: "newurivalue5",
+          printType,
+          fulfillerId: 1,
+          discount: 20,
+          grantCollectorsOnly: true,
+        },
+        grantName
+      );
+      await token
+        .connect(nonAdmin)
+        .approve(
+          legendMarketplace.address,
+          BigNumber.from("200000000000000000")
+        );
+
+      await expect(
+        legendMarketplace
+          .connect(nonAdmin)
+          .buyTokens([16], token.address, "fulfillment details")
+      ).to.be.revertedWith("LegendMarket: Must be authorized grant collector.");
+    });
   });
 });
