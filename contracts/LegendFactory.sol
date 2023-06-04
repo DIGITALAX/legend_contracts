@@ -86,6 +86,10 @@ contract LegendFactory {
                 .length == 0,
             "LegendFactory: Grant Name must be unique."
         );
+        require(
+            args.editionAmountValue == args.URIArrayValue.length,
+            "LegendFactory: The URI values must match the edition amount."
+        );
 
         // Deploy LegendAccessControl
         LegendAccessControl newLegendAccessControl = new LegendAccessControl(
