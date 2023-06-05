@@ -1,4 +1,4 @@
-import { run } from "hardhat";
+import { run, ethers } from "hardhat";
 // import { ethers } from "@nomiclabs/hardhat-etherscan";
 
 const LENS_HUB_PROXY_MATIC: string =
@@ -31,15 +31,16 @@ const main = async () => {
     //   "LegendFulfillment"
     // );
     // const LegendFactory = await ethers.getContractFactory("LegendFactory");
-    // const UpkeepIDConsumerExample = await ethers.getContractFactory(
-    //   "UpkeepIDConsumerExample"
-    // );
+    const UpkeepIDConsumerExample = await ethers.getContractFactory(
+      "UpkeepIDConsumer"
+    );
 
     // deploy
-    // const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
-    //   MUMBAI_LINK_TOKEN,
-    //   KEEPER_REGISTRY_MUMBAI
-    // );
+    const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
+      MUMBAI_LINK_TOKEN,
+      "0x57A4a13b35d25EE78e084168aBaC5ad360252467",
+      KEEPER_REGISTRY_MUMBAI
+    );
     // const accessControl = await GlobalAccessControl.deploy(
     //   "GlobalLegendAccessControl",
     //   "GLAC"
@@ -108,9 +109,9 @@ const main = async () => {
     const WAIT_BLOCK_CONFIRMATIONS = 20;
 
     // wait confirmations
-    // await upkeepIDConsumerExample.deployTransaction.wait(
-    //   WAIT_BLOCK_CONFIRMATIONS
-    // );
+    await upkeepIDConsumerExample.deployTransaction.wait(
+      WAIT_BLOCK_CONFIRMATIONS
+    );
     // await accessControl.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendFactory.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendPayment.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
@@ -121,9 +122,9 @@ const main = async () => {
     // await legendDrop.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendEscrow.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
 
-    // console.log(
-    //   `Upkeep Register deployed at\n${upkeepIDConsumerExample.address}`
-    // );
+    console.log(
+      `Upkeep Register deployed at\n${upkeepIDConsumerExample.address}`
+    );
     // console.log(
     //   `Global Access Control Contract deployed at\n${accessControl.address}`
     // );
@@ -210,10 +211,10 @@ const main = async () => {
     //     "LegendDrop",
     //   ],
     // });
-    await run(`verify:verify`, {
-      address: "0xE95730E1Fc38Fa4d0C94e35048e9B430D8f70E89",
-      constructorArguments: [MUMBAI_LINK_TOKEN, KEEPER_REGISTRY_MUMBAI],
-    });
+    // await run(`verify:verify`, {
+    //   address: "0xC4037066dE8598a58A6543eacc89ce5c05357cC8",
+    //   constructorArguments: [MUMBAI_LINK_TOKEN, KEEPER_REGISTRY_MUMBAI],
+    // });
   } catch (err: any) {
     console.error(err.message);
   }

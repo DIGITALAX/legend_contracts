@@ -74,6 +74,12 @@ contract LegendCollection {
         address owner
     );
 
+    event CollectionAdded(
+        uint256 indexed collectionId,
+        uint256 amount,
+        address owner
+    );
+
     event CollectionBurned(
         address indexed burner,
         uint256 indexed collectionId
@@ -235,7 +241,7 @@ contract LegendCollection {
         string memory _grantName
     ) external onlyGrantPublishers(msg.sender, _grantName) {
         address _creator = msg.sender;
-        
+
         require(
             params.basePrices.length == params.acceptedTokens.length,
             "LegendCollection: Invalid input"
@@ -285,12 +291,73 @@ contract LegendCollection {
             _creator
         );
 
-        emit CollectionMinted(
-            _collectionSupply,
-            params.uri,
+        emit CollectionMinted(_collectionSupply, params.uri, _amount, _creator);
+    }
+
+    function addToExistingCollection(uint256 _collectionId, uint256 _amount)
+        external
+    {
+        address _creator = msg.sender;
+        require(
+            _accessControl.isAdmin(_creator) ||
+                _accessControl.isWriter(_creator),
+            "LegendCollection: Only admin or writer can perform this action"
+        );
+        require(
+            _collections[_collectionId].creator == _creator,
+            "LegendCollection: Only the owner of a collection can add to it."
+        );
+
+        uint256[] memory tokenIds = new uint256[](_amount);
+
+        for (uint256 i = 0; i < _amount; i++) {
+            tokenIds[i] = _legendNFT.getTotalSupplyCount() + i + 1;
+        }
+
+        _collections[_collectionId].tokenIds = _concatenateArrays(
+            _collections[_collectionId].tokenIds,
+            tokenIds
+        );
+
+        MintParamsLibrary.MintParams memory params = MintParamsLibrary
+            .MintParams({
+                acceptedTokens: _collections[_collectionId].acceptedTokens,
+                basePrices: _collections[_collectionId].basePrices,
+                uri: _collections[_collectionId].uri,
+                printType: _printType[_collectionId],
+                fulfillerId: _fulfillerId[_collectionId],
+                discount: _discount[_collectionId],
+                grantCollectorsOnly: _grantCollectorsOnly[_collectionId]
+            });
+
+        _mintNFT(
+            params,
+            _pubId[_collectionId],
             _amount,
+            _dynamicNFTAddress[_collectionId],
             _creator
         );
+
+        emit CollectionAdded(_collectionId, _amount, _creator);
+    }
+
+    function _concatenateArrays(
+        uint256[] memory array1,
+        uint256[] memory array2
+    ) internal pure returns (uint256[] memory) {
+        uint256[] memory concatenated = new uint256[](
+            array1.length + array2.length
+        );
+
+        for (uint256 i = 0; i < array1.length; i++) {
+            concatenated[i] = array1[i];
+        }
+
+        for (uint256 j = 0; j < array2.length; j++) {
+            concatenated[array1.length + j] = array2[j];
+        }
+
+        return concatenated;
     }
 
     function _setMappings(
