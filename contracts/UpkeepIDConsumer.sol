@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSE
-pragma solidity ^0.8.6;
+pragma solidity 0.8.6;
 
-import {AutomationRegistryInterface, State, Config} from "@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface1_2.sol";
+import {AutomationRegistryInterface, State, OnchainConfig} from "@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface2_0.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
 interface KeeperRegistrarInterface {
@@ -12,14 +12,10 @@ interface KeeperRegistrarInterface {
         uint32 gasLimit,
         address adminAddress,
         bytes calldata checkData,
+        bytes calldata offchainConfig,
         uint96 amount,
-        uint8 source,
         address sender
     ) external;
-}
-
-interface LegendKeeper {
-    function getDeployerAddress() external view returns (address);
 }
 
 contract UpkeepIDConsumer {
@@ -47,14 +43,10 @@ contract UpkeepIDConsumer {
         uint32 gasLimit,
         address adminAddress,
         bytes calldata checkData,
-        uint96 amount,
-        uint8 source
+        bytes calldata offchainConfig,
+        uint96 amount
     ) public {
-        require(
-            LegendKeeper(upkeepContract).getDeployerAddress() == msg.sender,
-            "UpkeepIDConsumerExamplev1: Only a grant deployer can register."
-        );
-        (State memory state, , ) = i_registry.getState();
+        (State memory state, , , , ) = i_registry.getState();
         uint256 oldNonce = state.nonce;
         bytes memory payload = abi.encode(
             name,
@@ -63,8 +55,8 @@ contract UpkeepIDConsumer {
             gasLimit,
             adminAddress,
             checkData,
+            offchainConfig,
             amount,
-            source,
             address(this)
         );
 
@@ -73,7 +65,7 @@ contract UpkeepIDConsumer {
             amount,
             bytes.concat(registerSig, payload)
         );
-        (state, , ) = i_registry.getState();
+        (state, , , , ) = i_registry.getState();
         uint256 newNonce = state.nonce;
         if (newNonce == oldNonce + 1) {
             uint256 upkeepID = uint256(
@@ -90,4 +82,9 @@ contract UpkeepIDConsumer {
             revert("auto-approve disabled");
         }
     }
+
+    receive() external payable {}
+
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
 }
