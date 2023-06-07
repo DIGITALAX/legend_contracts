@@ -31,10 +31,16 @@ contract LegendFactory {
         address dynamicNFTAddress,
         string name,
         address indexed deployer,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 pubId,
+        uint256 profileId
     );
 
-    event GrantStatusUpdated(address deployerAddress, string status);
+    event GrantStatusUpdated(
+        string grantName,
+        address deployerAddress,
+        string status
+    );
 
     mapping(address => mapping(string => Grant)) private _deployerToGrant;
     mapping(address => address[]) private _deployedLegendKeepers;
@@ -151,7 +157,9 @@ contract LegendFactory {
             address(newLegendDynamicNFT),
             args.grantNameValue,
             msg.sender,
-            block.timestamp
+            block.timestamp,
+            _pubId,
+            _profileId
         );
     }
 
@@ -228,7 +236,7 @@ contract LegendFactory {
         string memory _grantName
     ) external onlyDynamicNFT(_deployerAddress, _grantName, msg.sender) {
         _deployerToGrant[_deployerAddress][_grantName].status = _newStatus;
-        emit GrantStatusUpdated(_deployerAddress, _newStatus);
+        emit GrantStatusUpdated(_grantName, _deployerAddress, _newStatus);
     }
 
     function setLensHubProxy(address _newAddress) external onlyAdmin {

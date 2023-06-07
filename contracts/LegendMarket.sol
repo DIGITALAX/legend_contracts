@@ -85,8 +85,10 @@ contract LegendMarket {
 
     event OrderCreated(
         uint256 indexed orderId,
+        uint256 totalPrice,
         address buyer,
-        string fulfillmentInformation
+        string fulfillmentInformation,
+        uint256 fulfillerId
     );
     event UpdateOrderDetails(
         uint256 indexed _orderId,
@@ -240,7 +242,13 @@ contract LegendMarket {
 
             _orders[_orderSupply] = newOrder;
 
-            emit OrderCreated(_orderSupply, msg.sender, _fulfillmentDetails);
+            emit OrderCreated(
+                _orderSupply,
+                totalPrice,
+                msg.sender,
+                _fulfillmentDetails,
+                _fulfillerId
+            );
         }
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {

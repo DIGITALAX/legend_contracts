@@ -1,4 +1,4 @@
-import { run, ethers } from "hardhat";
+import { run } from "hardhat";
 // import { ethers } from "@nomiclabs/hardhat-etherscan";
 
 const LENS_HUB_PROXY_MATIC: string =
@@ -19,28 +19,29 @@ const main = async () => {
     // const GlobalAccessControl = await ethers.getContractFactory(
     //   "GlobalLegendAccessControl"
     // );
-    // const LegendEscrow = await ethers.getContractFactory("LegendEscrow");
-    // const LegendCollection = await ethers.getContractFactory(
-    //   "LegendCollection"
-    // );
     // const LegendNFT = await ethers.getContractFactory("LegendNFT");
     // const LegendPayment = await ethers.getContractFactory("LegendPayment");
+    // const LegendFactory = await ethers.getContractFactory("LegendFactory");
     // const LegendMarketplace = await ethers.getContractFactory("LegendMarket");
-    // const LegendDrop = await ethers.getContractFactory("LegendDrop");
     // const LegendFulfillment = await ethers.getContractFactory(
     //   "LegendFulfillment"
     // );
-    // const LegendFactory = await ethers.getContractFactory("LegendFactory");
-    const UpkeepIDConsumerExample = await ethers.getContractFactory(
-      "UpkeepIDConsumer"
-    );
+    // const LegendCollection = await ethers.getContractFactory(
+    //   "LegendCollection"
+    // );
+    // const LegendDrop = await ethers.getContractFactory("LegendDrop");
+    // const LegendEscrow = await ethers.getContractFactory("LegendEscrow");
+
+    // const UpkeepIDConsumerExample = await ethers.getContractFactory(
+    //   "UpkeepIDConsumer"
+    // );
 
     // deploy
-    const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
-      MUMBAI_LINK_TOKEN,
-      "0x57A4a13b35d25EE78e084168aBaC5ad360252467",
-      KEEPER_REGISTRY_MUMBAI
-    );
+    // const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
+    //   MUMBAI_LINK_TOKEN,
+    //   "0x57A4a13b35d25EE78e084168aBaC5ad360252467",
+    //   KEEPER_REGISTRY_MUMBAI
+    // );
     // const accessControl = await GlobalAccessControl.deploy(
     //   "GlobalLegendAccessControl",
     //   "GLAC"
@@ -48,70 +49,74 @@ const main = async () => {
     // const legendFactory = await LegendFactory.deploy(
     //   "LegendFactory",
     //   "LFAC",
-    //   accessControl.address
+    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"
     // );
-    // const legendPayment = await LegendPayment.deploy(
-    //   "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be"
-    // );
-    // const legendNFT = await LegendNFT.deploy(
-    //   "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be"
-    // );
+    // const legendPayment = await LegendPayment.deploy("0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86");
+    // const legendNFT = await LegendNFT.deploy("0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86");
     // const legendCollection = await LegendCollection.deploy(
-    //   "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
-    //   "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //   "0x7DFB2D3ccEb99de8606B275fdABf8b5228CAdEAb",
-    //   "0xD026B4E1F9d6dD682faA2a7Fdc6BEcE3D1A557F6",
+    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //   "0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f",
+    //   "0x0BD3C2a88A729c5f02276b7987A5922A12f465eB",
     //   "LECO",
     //   "LegendCollection"
     // );
     // const legendFulfillment = await LegendFulfillment.deploy(
-    //   "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //   "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
+    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
     //   legendCollection.address,
     //   "LEFUL",
     //   "LegendFulfillment"
     // );
     // const legendMarketplace = await LegendMarketplace.deploy(
-    //   "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
-    //   "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //   "0xc09F0Ca5EadB895B96F44D575B36Fd62c58768c8",
-    //   "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
+    //   legendCollection.address,
+    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //   legendFulfillment.address,
+    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
     //   "LEMA",
     //   "LegendMarketplace"
     // );
     // const legendDrop = await LegendDrop.deploy(
-    //   "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
-    //    "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
+    //   "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
+    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
     //   "LEDR",
     //   "LegendDrop"
     // );
     // const legendEscrow = await LegendEscrow.deploy(
-    //   "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
-    //   legendMarketplace.address,
-    //   "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //   "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
+    //   "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
+    //   "0xca351976Cf47A52Aa49a5e89034796F35f36E3E6",
+    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
     //   "LEES",
     //   "LegendEscrow"
     // );
 
     // await legendFactory.setLensHubProxy(LENS_HUB_PROXY_MUMBAI);
-    // await accessControl.addAdmin("0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F");
-    // await legendNFT.setLegendCollection("0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F");
+    // await accessControl.addAdmin(legendCollection.address);
+    // await legendNFT.setLegendCollection(legendCollection.address);
     // await legendNFT.setLegendEscrow(legendEscrow.address);
     // await legendCollection.setLegendDrop(legendDrop.address);
     // await legendCollection.setLegendFulfillment(legendFulfillment.address);
     // await legendCollection.setLegendEscrow(legendEscrow.address);
     // await legendMarketplace.setLegendEscrow(legendEscrow.address);
-    // legendPayment.setVerifiedPaymentTokens([]);
-    // legendFulfillment.createFulfiller(20, "0xfa3fea500eeDAa120f7EeC2E4309Fe094F854E61");
-    // accessControl.addAdmin(legendFactory.address);
+    // legendPayment.setVerifiedPaymentTokens([
+    //   "0x6199A505ec1707695Ce49b59A07A147f2d50f22D",
+    //   "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+    //   "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+    //   "0x6968105460f67c3BF751bE7C15f92F5286Fd0CE5",
+    // ]);
+    // legendFulfillment.createFulfiller(
+    //   20,
+    //   "0xfa3fea500eeDAa120f7EeC2E4309Fe094F854E61"
+    // );
+    // accessControl.addAdmin("0x0BD3C2a88A729c5f02276b7987A5922A12f465eB");
 
     const WAIT_BLOCK_CONFIRMATIONS = 20;
 
     // wait confirmations
-    await upkeepIDConsumerExample.deployTransaction.wait(
-      WAIT_BLOCK_CONFIRMATIONS
-    );
+    // await upkeepIDConsumerExample.deployTransaction.wait(
+    //   WAIT_BLOCK_CONFIRMATIONS
+    // );
     // await accessControl.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendFactory.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendPayment.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
@@ -122,15 +127,15 @@ const main = async () => {
     // await legendDrop.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendEscrow.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
 
-    console.log(
-      `Upkeep Register deployed at\n${upkeepIDConsumerExample.address}`
-    );
     // console.log(
-    //   `Global Access Control Contract deployed at\n${accessControl.address}`
+    //   `Upkeep Register deployed at\n${upkeepIDConsumerExample.address}`
     // );
-    // console.log(`Factory Contract deployed at\n${legendFactory.address}`);
-    // console.log(`Payment Contract deployed at\n${legendPayment.address}`);
-    // console.log(`NFT Contract deployed at\n${legendNFT.address}`);
+    // console.log(
+    //   `Global Access Control Contract deployed at\n${"0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"}`
+    // );
+    // console.log(`Factory Contract deployed at\n${"0x0BD3C2a88A729c5f02276b7987A5922A12f465eB"}`);
+    // console.log(`Payment Contract deployed at\n${"0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f"}`);
+    // console.log(`NFT Contract deployed at\n${"0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670"}`);
     // console.log(`Collection Contract deployed at\n${legendCollection.address}`);
     // console.log(
     //   `Fulfillment Contract deployed at\n${legendFulfillment.address}`
@@ -140,73 +145,73 @@ const main = async () => {
     // console.log(`Escrow Contract deployed at\n${legendEscrow.address}`);
 
     // await run(`verify:verify`, {
-    //   address: "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
+    //   address: "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
     //   constructorArguments: ["GlobalLegendAccessControl", "GLAC"],
     // });
     // await run(`verify:verify`, {
-    //   address: "0xD026B4E1F9d6dD682faA2a7Fdc6BEcE3D1A557F6",
+    //   address: "0x0BD3C2a88A729c5f02276b7987A5922A12f465eB",
     //   constructorArguments: [
     //     "LegendFactory",
     //     "LFAC",
-    //     "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
+    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
     //   ],
     // });
     // await run(`verify:verify`, {
-    //   address: "0x7DFB2D3ccEb99de8606B275fdABf8b5228CAdEAb",
-    //   constructorArguments: ["0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be"],
+    //   address: "0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f",
+    //   constructorArguments: ["0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"],
     // });
     // await run(`verify:verify`, {
-    //   address: "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
-    //   constructorArguments: ["0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be"],
+    //   address: "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+    //   constructorArguments: ["0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"],
     // });
     // await run(`verify:verify`, {
-    //   address: "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
+    //   address: "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
     //   constructorArguments: [
-    //     "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
-    //     "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //     "0x7DFB2D3ccEb99de8606B275fdABf8b5228CAdEAb",
-    //     "0xD026B4E1F9d6dD682faA2a7Fdc6BEcE3D1A557F6",
+    //     "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //     "0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f",
+    //     "0x0BD3C2a88A729c5f02276b7987A5922A12f465eB",
     //     "LECO",
     //     "LegendCollection",
     //   ],
     // });
+    await run(`verify:verify`, {
+      address: "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
+      constructorArguments: [
+        "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+        "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+        "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
+        "LEFUL",
+        "LegendFulfillment",
+      ],
+    });
     // await run(`verify:verify`, {
-    //   address: "0xc09F0Ca5EadB895B96F44D575B36Fd62c58768c8",
+    //   address: "0xca351976Cf47A52Aa49a5e89034796F35f36E3E6",
     //   constructorArguments: [
-    //     "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //     "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
-    //     "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
-    //     "LEFUL",
-    //     "LegendFulfillment",
-    //   ],
-    // });
-    // await run(`verify:verify`, {
-    //   address: "0x12df1E0166c4abb8aB8df6392eCE253c47E0caa1",
-    //   constructorArguments: [
-    //     "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
-    //     "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //     "0xc09F0Ca5EadB895B96F44D575B36Fd62c58768c8",
-    //     "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
+    //     "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
+    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //     "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
+    //     "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
     //     "LEMA",
     //     "LegendMarketplace",
     //   ],
     // });
     // await run(`verify:verify`, {
-    //   address: "0xD9b92636af9028520cb9fC5fC60CecE4F9b754B2",
+    //   address: "0x1b6d2Df57aAFc86dE28e0E1328D6f68eA1d369Ea",
     //   constructorArguments: [
-    //     "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
-    //     "0x12df1E0166c4abb8aB8df6392eCE253c47E0caa1",
-    //     "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
-    //     "0xb16c46011A2Ff2fE742c34E299099AFaC4b77fa3",
+    //     "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
+    //     "0xca351976Cf47A52Aa49a5e89034796F35f36E3E6",
+    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //     "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
     //     "LEES",
     //     "LegendEscrow",
     //   ],
     // });
     // await run(`verify:verify`, {
-    //   address: "0xCd9aeE9D390609B6F6b569D7C4AD9D4405410770",
+    //   address: "0xFeE1aA1CdEA0E5776fc836B489BAaAb4936aa690",
     //   constructorArguments: [
-    //     "0xE11feaB8ddfDCd7C5a1e2Fa68E88cbdA403e4B7F",
-    //     "0xC40a180aBa7eE7E49FcfE24d4D654B31cF5400be",
+    //     "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
+    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
     //     "LEDR",
     //     "LegendDrop",
     //   ],

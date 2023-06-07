@@ -40,10 +40,11 @@ contract LegendDynamicNFT is ERC721 {
     LegendFactory private _legendFactory;
 
     event TokenURIUpdated(
-        uint256 indexed tokenId,
+        uint256 indexed collectAmount,
         string newURI,
         address updater
     );
+    event DynamicNFTMinted(address collector, uint256 tokenId);
 
     modifier onlyFactory() {
         require(
@@ -107,8 +108,8 @@ contract LegendDynamicNFT is ERC721 {
             "LegendDynamicNFT: Cannot mint above the max supply."
         );
 
-        uint256 _tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
+        uint256 _tokenId = _tokenIdCounter.current();
 
         _safeMint(_to, _tokenId);
 
@@ -117,6 +118,8 @@ contract LegendDynamicNFT is ERC721 {
         _collectorMapping[msg.sender] = _lensHubProxy.defaultProfile(
             _deployerAddress
         );
+
+        emit DynamicNFTMinted(msg.sender, _tokenIdCounter.current());
     }
 
     function updateMetadata(uint256 _totalAmountOfCollects)
@@ -137,6 +140,12 @@ contract LegendDynamicNFT is ERC721 {
 
         // update new uri for all tokenids
         _myBaseURI = _URIArray[_currentCounter];
+
+        emit TokenURIUpdated(
+            _totalAmountOfCollects,
+            _URIArray[_currentCounter],
+            msg.sender
+        );
     }
 
     function _burn(uint256 _tokenId) internal override {
