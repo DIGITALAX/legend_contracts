@@ -26,6 +26,13 @@ contract UpkeepIDConsumer {
 
     mapping(address => mapping(uint256 => uint256)) private _upkeepId;
 
+    event UpkeepRegistered(
+        uint256 indexed upkeepID,
+        address sender,
+        string name,
+        address upkeepContract
+    );
+
     constructor(
         LinkTokenInterface _link,
         address _registrar,
@@ -67,6 +74,10 @@ contract UpkeepIDConsumer {
         );
         (state, , , , ) = i_registry.getState();
         uint256 newNonce = state.nonce;
+        
+        string memory grantName = name;
+        address keeperContract = upkeepContract;
+
         if (newNonce == oldNonce + 1) {
             uint256 upkeepID = uint256(
                 keccak256(
@@ -78,6 +89,7 @@ contract UpkeepIDConsumer {
                 )
             );
             _upkeepId[msg.sender][block.timestamp] = upkeepID;
+            emit UpkeepRegistered(upkeepID, msg.sender, grantName, keeperContract);
         } else {
             revert("auto-approve disabled");
         }
