@@ -83,6 +83,20 @@ contract UpkeepIDConsumer {
         }
     }
 
+    function getUpkeepId(address _address)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory upkeepIds = new uint256[](block.timestamp + 1);
+
+        for (uint256 i = 0; i <= block.timestamp; i++) {
+            upkeepIds[i] = _upkeepId[_address][i];
+        }
+
+        return upkeepIds;
+    }
+
     receive() external payable {}
 
     // Fallback function is called when msg.data is not empty
