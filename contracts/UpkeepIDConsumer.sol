@@ -24,8 +24,6 @@ contract UpkeepIDConsumer {
     AutomationRegistryInterface public immutable i_registry;
     bytes4 registerSig = KeeperRegistrarInterface.register.selector;
 
-    mapping(address => mapping(uint256 => uint256)) private _upkeepId;
-
     event UpkeepRegistered(
         uint256 indexed upkeepID,
         address sender,
@@ -74,7 +72,7 @@ contract UpkeepIDConsumer {
         );
         (state, , , , ) = i_registry.getState();
         uint256 newNonce = state.nonce;
-        
+
         string memory grantName = name;
         address keeperContract = upkeepContract;
 
@@ -88,25 +86,15 @@ contract UpkeepIDConsumer {
                     )
                 )
             );
-            _upkeepId[msg.sender][block.timestamp] = upkeepID;
-            emit UpkeepRegistered(upkeepID, msg.sender, grantName, keeperContract);
+            emit UpkeepRegistered(
+                upkeepID,
+                msg.sender,
+                grantName,
+                keeperContract
+            );
         } else {
             revert("auto-approve disabled");
         }
-    }
-
-    function getUpkeepId(address _address)
-        public
-        view
-        returns (uint256[] memory)
-    {
-        uint256[] memory upkeepIds = new uint256[](block.timestamp + 1);
-
-        for (uint256 i = 0; i <= block.timestamp; i++) {
-            upkeepIds[i] = _upkeepId[_address][i];
-        }
-
-        return upkeepIds;
     }
 
     receive() external payable {}
