@@ -1,4 +1,4 @@
-import { run, ethers } from "hardhat";
+import { run } from "hardhat";
 // import { ethers } from "@nomiclabs/hardhat-etherscan";
 
 const LENS_HUB_PROXY_MATIC: string =
@@ -32,16 +32,16 @@ const main = async () => {
     // const LegendDrop = await ethers.getContractFactory("LegendDrop");
     // const LegendEscrow = await ethers.getContractFactory("LegendEscrow");
 
-    const UpkeepIDConsumerExample = await ethers.getContractFactory(
-      "UpkeepIDConsumer"
-    );
+    // const UpkeepIDConsumerExample = await ethers.getContractFactory(
+    //   "UpkeepIDConsumer"
+    // );
 
     // deploy
-    const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
-      MUMBAI_LINK_TOKEN,
-      "0x57A4a13b35d25EE78e084168aBaC5ad360252467",
-      KEEPER_REGISTRY_MUMBAI
-    );
+    // const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
+    //   MUMBAI_LINK_TOKEN,
+    //   "0x57A4a13b35d25EE78e084168aBaC5ad360252467",
+    //   KEEPER_REGISTRY_MUMBAI
+    // );
     // const accessControl = await GlobalAccessControl.deploy(
     //   "GlobalLegendAccessControl",
     //   "GLAC"
@@ -69,9 +69,9 @@ const main = async () => {
     //   "LegendFulfillment"
     // );
     // const legendMarketplace = await LegendMarketplace.deploy(
-    //   legendCollection.address,
+    //   "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
     //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //   legendFulfillment.address,
+    //   "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
     //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
     //   "LEMA",
     //   "LegendMarketplace"
@@ -114,9 +114,9 @@ const main = async () => {
     const WAIT_BLOCK_CONFIRMATIONS = 20;
 
     // wait confirmations
-    await upkeepIDConsumerExample.deployTransaction.wait(
-      WAIT_BLOCK_CONFIRMATIONS
-    );
+    // await upkeepIDConsumerExample.deployTransaction.wait(
+    //   WAIT_BLOCK_CONFIRMATIONS
+    // );
     // await accessControl.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendFactory.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendPayment.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
@@ -127,9 +127,9 @@ const main = async () => {
     // await legendDrop.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
     // await legendEscrow.deployTransaction.wait(WAIT_BLOCK_CONFIRMATIONS);
 
-    console.log(
-      `Upkeep Register deployed at\n${upkeepIDConsumerExample.address}`
-    );
+    // console.log(
+    //   `Upkeep Register deployed at\n${upkeepIDConsumerExample.address}`
+    // );
     // console.log(
     //   `Global Access Control Contract deployed at\n${"0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"}`
     // );
@@ -185,17 +185,17 @@ const main = async () => {
     //     "LegendFulfillment",
     //   ],
     // });
-    // await run(`verify:verify`, {
-    //   address: "0xca351976Cf47A52Aa49a5e89034796F35f36E3E6",
-    //   constructorArguments: [
-    //     "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //     "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
-    //     "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
-    //     "LEMA",
-    //     "LegendMarketplace",
-    //   ],
-    // });
+    await run(`verify:verify`, {
+      address: "0x22Ae6Afd864378B0b1Bab7436d32C47e8B03e53b",
+      constructorArguments: [
+        "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
+        "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+        "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
+        "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+        "LEMA",
+        "LegendMarketplace",
+      ],
+    });
     // await run(`verify:verify`, {
     //   address: "0x1b6d2Df57aAFc86dE28e0E1328D6f68eA1d369Ea",
     //   constructorArguments: [

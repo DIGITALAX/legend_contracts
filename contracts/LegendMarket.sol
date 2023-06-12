@@ -79,7 +79,7 @@ contract LegendMarket {
     event TokensBought(
         uint256[] tokenIds,
         address buyer,
-        address chosenAddress
+        address[] chosenAddress
     );
     event OrderIsFulfilled(uint256 indexed _orderId, address _fulfillerAddress);
 
@@ -130,9 +130,14 @@ contract LegendMarket {
 
     function buyTokens(
         uint256[] memory _tokenIds,
-        address _chosenTokenAddress,
+        address[] memory _chosenTokenAddresses,
         string memory _fulfillmentDetails
     ) external {
+        require(
+            _chosenTokenAddresses.length == _tokenIds.length,
+            "LegendMarket: Must provide a token address for each tokenId"
+        );
+
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             if (_legendNFT.getTokenGrantCollectorsOnly(_tokenIds[i])) {
                 require(
@@ -141,23 +146,18 @@ contract LegendMarket {
                     ).getCollectorClaimedNFT(msg.sender),
                     "LegendMarket: Must be authorized grant collector."
                 );
+                require(
+                    _legendNFT.ownerOf(_tokenIds[i]) == address(_legendEscrow),
+                    "LegendMarket: Token must be owned by Escrow"
+                );
             }
-        }
 
-        uint256 totalPrice = 0;
-        uint256[] memory prices = new uint256[](_tokenIds.length);
-
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            require(
-                _legendNFT.ownerOf(_tokenIds[i]) == address(_legendEscrow),
-                "LegendMarket: Token must be owned by Escrow"
-            );
             bool isAccepted = false;
             address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
                 _tokenIds[i]
             );
             for (uint256 j = 0; j < acceptedTokens.length; j++) {
-                if (acceptedTokens[j] == _chosenTokenAddress) {
+                if (acceptedTokens[j] == _chosenTokenAddresses[i]) {
                     isAccepted = true;
                     break;
                 }
@@ -168,12 +168,14 @@ contract LegendMarket {
             );
         }
 
+        uint256[] memory prices = new uint256[](_tokenIds.length);
+
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             address[] memory acceptedTokens = _legendNFT.getTokenAcceptedTokens(
                 _tokenIds[i]
             );
             for (uint256 j = 0; j < acceptedTokens.length; j++) {
-                if (acceptedTokens[j] == _chosenTokenAddress) {
+                if (acceptedTokens[j] == _chosenTokenAddresses[i]) {
                     prices[i] = _legendNFT.getTokenBasePrices(_tokenIds[i])[j];
 
                     if (
@@ -182,13 +184,11 @@ contract LegendMarket {
                             _legendNFT.getTokenDynamicNFTAddress(_tokenIds[i])
                         ).getCollectorClaimedNFT(msg.sender)
                     ) {
-                        totalPrice +=
+                        prices[i] =
                             prices[i] -
                             ((prices[i] *
                                 _legendNFT.getTokenDiscount(_tokenIds[i])) /
                                 100);
-                    } else {
-                        totalPrice += prices[i];
                     }
 
                     break;
@@ -196,19 +196,19 @@ contract LegendMarket {
             }
         }
 
-        uint256 allowance = IERC20(_chosenTokenAddress).allowance(
-            msg.sender,
-            address(this)
-        );
-
-        require(
-            allowance >= totalPrice,
-            "LegendMarket: Insufficient Approval Allowance"
-        );
-
         for (uint256 i = 0; i < _tokenIds.length; i++) {
+            uint256 allowance = IERC20(_chosenTokenAddresses[i]).allowance(
+                msg.sender,
+                address(this)
+            );
+
+            require(
+                allowance >= prices[i],
+                "LegendMarket: Insufficient Approval Allowance"
+            );
+
             uint256 _fulfillerId = _legendNFT.getTokenFulfillerId(_tokenIds[i]);
-            IERC20(_chosenTokenAddress).transferFrom(
+            IERC20(_chosenTokenAddresses[i]).transferFrom(
                 msg.sender,
                 _legendNFT.getTokenCreator(_tokenIds[i]),
                 prices[i] -
@@ -217,7 +217,7 @@ contract LegendMarket {
                             _legendFulfillment.getFulfillerPercent(_fulfillerId)
                         )) / 100)
             );
-            IERC20(_chosenTokenAddress).transferFrom(
+            IERC20(_chosenTokenAddresses[i]).transferFrom(
                 msg.sender,
                 _legendFulfillment.getFulfillerAddress(_fulfillerId),
                 ((prices[i] *
@@ -233,7 +233,7 @@ contract LegendMarket {
                 tokenId: _tokenIds[i],
                 details: _fulfillmentDetails,
                 buyer: msg.sender,
-                chosenAddress: _chosenTokenAddress,
+                chosenAddress: _chosenTokenAddresses[i],
                 timestamp: block.timestamp,
                 status: "ordered",
                 isFulfilled: false,
@@ -244,7 +244,7 @@ contract LegendMarket {
 
             emit OrderCreated(
                 _orderSupply,
-                totalPrice,
+                prices[i],
                 msg.sender,
                 _fulfillmentDetails,
                 _fulfillerId
@@ -258,7 +258,7 @@ contract LegendMarket {
             );
         }
 
-        emit TokensBought(_tokenIds, msg.sender, _chosenTokenAddress);
+        emit TokensBought(_tokenIds, msg.sender, _chosenTokenAddresses);
     }
 
     function updateAccessControl(address _newAccessControlAddress)
