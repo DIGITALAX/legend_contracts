@@ -49,44 +49,44 @@ const main = async () => {
     // const legendFactory = await LegendFactory.deploy(
     //   "LegendFactory",
     //   "LFAC",
-    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C"
     // );
-    // const legendPayment = await LegendPayment.deploy("0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86");
-    // const legendNFT = await LegendNFT.deploy("0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86");
+    // const legendPayment = await LegendPayment.deploy(accessControl.address);
+    // const legendNFT = await LegendNFT.deploy(accessControl.address);
     // const legendCollection = await LegendCollection.deploy(
-    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
-    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //   "0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f",
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "0xb619Ac757cE3230FB996DA5899dD692B6299DFFc",
     //   "0x0BD3C2a88A729c5f02276b7987A5922A12f465eB",
     //   "LECO",
     //   "LegendCollection"
     // );
     // const legendFulfillment = await LegendFulfillment.deploy(
-    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
     //   legendCollection.address,
     //   "LEFUL",
     //   "LegendFulfillment"
     // );
     // const legendMarketplace = await LegendMarketplace.deploy(
-    //   "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //   "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
-    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+    //   legendCollection.address,
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   legendFulfillment.address,
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
     //   "LEMA",
     //   "LegendMarketplace"
     // );
     // const legendDrop = await LegendDrop.deploy(
-    //   "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //   "0xA3C2F7ba49513Ae46d44D074679f52cAEF7E721B",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
     //   "LEDR",
     //   "LegendDrop"
     // );
     // const legendEscrow = await LegendEscrow.deploy(
-    //   "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //   "0xca351976Cf47A52Aa49a5e89034796F35f36E3E6",
-    //   "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //   "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
+    //   "0xA3C2F7ba49513Ae46d44D074679f52cAEF7E721B",
+    //   "0xd68E8FD1dffC8F09b27b2973d06027D9E96e9d20",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
     //   "LEES",
     //   "LegendEscrow"
     // );
@@ -131,11 +131,11 @@ const main = async () => {
     //   `Upkeep Register deployed at\n${upkeepIDConsumerExample.address}`
     // );
     // console.log(
-    //   `Global Access Control Contract deployed at\n${"0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"}`
+    //   `Global Access Control Contract deployed at\n${accessControl.address}`
     // );
-    // console.log(`Factory Contract deployed at\n${"0x0BD3C2a88A729c5f02276b7987A5922A12f465eB"}`);
-    // console.log(`Payment Contract deployed at\n${"0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f"}`);
-    // console.log(`NFT Contract deployed at\n${"0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670"}`);
+    // console.log(`Factory Contract deployed at\n${legendFactory.address}`);
+    // console.log(`Payment Contract deployed at\n${legendPayment.address}`);
+    // console.log(`NFT Contract deployed at\n${legendNFT.address}`);
     // console.log(`Collection Contract deployed at\n${legendCollection.address}`);
     // console.log(
     //   `Fulfillment Contract deployed at\n${legendFulfillment.address}`
@@ -145,75 +145,75 @@ const main = async () => {
     // console.log(`Escrow Contract deployed at\n${legendEscrow.address}`);
 
     // await run(`verify:verify`, {
-    //   address: "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
+    //   address: "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
     //   constructorArguments: ["GlobalLegendAccessControl", "GLAC"],
     // });
-    // await run(`verify:verify`, {
-    //   address: "0x0BD3C2a88A729c5f02276b7987A5922A12f465eB",
-    //   constructorArguments: [
-    //     "LegendFactory",
-    //     "LFAC",
-    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //   ],
-    // });
-    // await run(`verify:verify`, {
-    //   address: "0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f",
-    //   constructorArguments: ["0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"],
-    // });
-    // await run(`verify:verify`, {
-    //   address: "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
-    //   constructorArguments: ["0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86"],
-    // });
-    // await run(`verify:verify`, {
-    //   address: "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //   constructorArguments: [
-    //     "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
-    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //     "0x209Ce89Bd8b11c53dDECF6077cDD71B17709CC9f",
-    //     "0x0BD3C2a88A729c5f02276b7987A5922A12f465eB",
-    //     "LECO",
-    //     "LegendCollection",
-    //   ],
-    // });
-    // await run(`verify:verify`, {
-    //   address: "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
-    //   constructorArguments: [
-    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //     "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
-    //     "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //     "LEFUL",
-    //     "LegendFulfillment",
-    //   ],
-    // });
     await run(`verify:verify`, {
-      address: "0x22Ae6Afd864378B0b1Bab7436d32C47e8B03e53b",
+      address: "0x3723387De6d07A7da332f0FeD7a4d0e11845d2c3",
       constructorArguments: [
-        "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-        "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-        "0xcd3C8d74027C0711A5b57D0881b7dDa012825ebc",
-        "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
-        "LEMA",
-        "LegendMarketplace",
+        "LegendFactory",
+        "LFAC",
+        "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
       ],
     });
     // await run(`verify:verify`, {
-    //   address: "0x1b6d2Df57aAFc86dE28e0E1328D6f68eA1d369Ea",
+    //   address: "0x86252789Adf119290Bb20DC0047d5cd4FdD6E213",
+    //   constructorArguments: ["0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C"],
+    // });
+    // await run(`verify:verify`, {
+    //   address: "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
+    //   constructorArguments: ["0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C"],
+    // });
+    // await run(`verify:verify`, {
+    //   address: "0xA3C2F7ba49513Ae46d44D074679f52cAEF7E721B",
     //   constructorArguments: [
-    //     "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //     "0xca351976Cf47A52Aa49a5e89034796F35f36E3E6",
-    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //     "0x3E7Fa4A33a8828DAf83B63522D8ded0eCf9a8670",
-    //     "LEES",
-    //     "LegendEscrow",
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "0xb619Ac757cE3230FB996DA5899dD692B6299DFFc",
+    //   "0x0BD3C2a88A729c5f02276b7987A5922A12f465eB",
+    //   "LECO",
+    //   "LegendCollection"
     //   ],
     // });
     // await run(`verify:verify`, {
-    //   address: "0xFeE1aA1CdEA0E5776fc836B489BAaAb4936aa690",
+    //   address: "0x88fa5a97345ba5e827Cf32F437f46449C5D68754",
     //   constructorArguments: [
-    //     "0x4C0143d8321738A0b624491C38aaEeb873c578a9",
-    //     "0x4DB933214afA3A49b2DA9B02d81bBbf8951fdB86",
-    //     "LEDR",
-    //     "LegendDrop",
+    //    "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
+    //   "0xA3C2F7ba49513Ae46d44D074679f52cAEF7E721B",
+    //   "LEFUL",
+    //   "LegendFulfillment"
+    //   ],
+    // });
+    // await run(`verify:verify`, {
+    //   address: "0xd68E8FD1dffC8F09b27b2973d06027D9E96e9d20",
+    //   constructorArguments: [
+    //   "0xA3C2F7ba49513Ae46d44D074679f52cAEF7E721B",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "0x88fa5a97345ba5e827Cf32F437f46449C5D68754",
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
+    //   "LEMA",
+    //   "LegendMarketplace"
+    //   ],
+    // });
+    // await run(`verify:verify`, {
+    //   address: "0x8FD5F1a77967e881868C8b81e779Fd8C29aEEB8e",
+    //   constructorArguments: [
+    //   "0xA3C2F7ba49513Ae46d44D074679f52cAEF7E721B",
+    //   "0xd68E8FD1dffC8F09b27b2973d06027D9E96e9d20",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "0x115655bDd3CCf1979205A14796CD88DCBD362D7a",
+    //   "LEES",
+    //   "LegendEscrow"
+    //   ],
+    // });
+    // await run(`verify:verify`, {
+    //   address: "0xb01F35968e7D204521adB7dDd81e9F69bC99fDF4",
+    //   constructorArguments: [
+    //   "0xA3C2F7ba49513Ae46d44D074679f52cAEF7E721B",
+    //   "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   "LEDR",
+    //   "LegendDrop"
     //   ],
     // });
     // await run(`verify:verify`, {

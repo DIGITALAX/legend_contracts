@@ -26,6 +26,7 @@ contract LegendDynamicNFT is ERC721 {
     string private _myBaseURI;
     string private _grantName;
     address private _deployerAddress;
+    address[] private _collectors;
 
     mapping(address => bool) private _collectorClaimedNFT;
     mapping(address => uint256) private _collectorMapping;
@@ -97,7 +98,7 @@ contract LegendDynamicNFT is ERC721 {
         _maxSupply = _editionAmount;
     }
 
-    function safeMint(address _to) external onlyCollector {
+    function safeMint() external onlyCollector {
         require(
             !_collectorClaimedNFT[msg.sender],
             "LegendDynamicNFT: Only 1 NFT can be claimed per unique collector."
@@ -111,13 +112,15 @@ contract LegendDynamicNFT is ERC721 {
         _tokenIdCounter.increment();
         uint256 _tokenId = _tokenIdCounter.current();
 
-        _safeMint(_to, _tokenId);
+        _safeMint(msg.sender, _tokenId);
 
         _collectorClaimedNFT[msg.sender] = true;
         _collectorToPubId[_legendKeeper.getPostId()][msg.sender] = true;
         _collectorMapping[msg.sender] = _lensHubProxy.defaultProfile(
             _deployerAddress
         );
+
+        _collectors.push(msg.sender);
 
         emit DynamicNFTMinted(msg.sender, _tokenIdCounter.current());
     }
@@ -239,5 +242,9 @@ contract LegendDynamicNFT is ERC721 {
 
     function getCollectNFTAddress() public view returns (address) {
         return address(_collectNFT);
+    }
+
+    function getAllCollectors() public view returns (address[] memory) {
+        return _collectors;
     }
 }
