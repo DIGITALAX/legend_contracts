@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 
 import "./LegendCollection.sol";
 import "./GlobalLegendAccessControl.sol";
-import "./LegendEscrow.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
@@ -12,7 +11,6 @@ contract LegendNFT is ERC721Enumerable {
     using MintParamsLibrary for MintParamsLibrary.MintParams;
 
     GlobalLegendAccessControl private _accessControl;
-    LegendEscrow private _legendEscrow;
     LegendCollection private _legendCollection;
     uint256 private _totalSupplyCount;
 
@@ -46,11 +44,7 @@ contract LegendNFT is ERC721Enumerable {
         address indexed newLegendCollection,
         address updater
     );
-    event LegendEscrowUpdated(
-        address indexed oldLegendEscrow,
-        address indexed newLegendEscrow,
-        address updater
-    );
+    
     event TokenBurned(uint256 indexed tokenId);
     event TokenBasePriceUpdated(
         uint256 indexed tokenId,
@@ -109,14 +103,6 @@ contract LegendNFT is ERC721Enumerable {
         _;
     }
 
-    modifier tokensInEscrow(uint256 _tokenId) {
-        require(
-            ownerOf(_tokenId) == address(_legendEscrow),
-            "LegendNFT: Tokens can only be edited when whole collection is in Escrow"
-        );
-        _;
-    }
-
     constructor(address _accessControlAddress) ERC721("LegendNFT", "CHRON") {
         _accessControl = GlobalLegendAccessControl(_accessControlAddress);
         _totalSupplyCount = 0;
@@ -128,7 +114,8 @@ contract LegendNFT is ERC721Enumerable {
         uint256 _pubIdValue,
         uint256 _collectionId,
         address _dynamicNFTAddressValue,
-        address _creatorAddress
+        address _creatorAddress,
+        address _purchaserAddress
     ) public onlyCollectionContract {
         require(
             params.discount < 100,
@@ -141,11 +128,10 @@ contract LegendNFT is ERC721Enumerable {
             _setMappings(params, _pubIdValue, _dynamicNFTAddressValue);
 
             tokenIds[i] = _totalSupplyCount;
-            _safeMint(address(_legendEscrow), _totalSupplyCount);
-            _legendEscrow.deposit(_totalSupplyCount, true);
+            _safeMint(_purchaserAddress, _totalSupplyCount);
         }
 
-        emit BatchTokenMinted(address(_legendEscrow), tokenIds, params.uri);
+        emit BatchTokenMinted(_purchaserAddress, tokenIds, params.uri);
     }
 
     function _setMappings(
@@ -214,12 +200,6 @@ contract LegendNFT is ERC721Enumerable {
             _legendCollectionAddress,
             msg.sender
         );
-    }
-
-    function setLegendEscrow(address _legendEscrowAddress) external onlyAdmin {
-        address oldAddress = address(_legendEscrow);
-        _legendEscrow = LegendEscrow(_legendEscrowAddress);
-        emit LegendEscrowUpdated(oldAddress, _legendEscrowAddress, msg.sender);
     }
 
     function updateAccessControl(address _newAccessControlAddress)
@@ -383,7 +363,6 @@ contract LegendNFT is ERC721Enumerable {
     function setTokenURI(uint256 _tokenId, string memory _newURI)
         public
         onlyCollectionContract
-        tokensInEscrow(_tokenId)
     {
         string memory oldURI = _tokens[_tokenId].uri;
         _tokens[_tokenId].uri = _newURI;
@@ -416,10 +395,6 @@ contract LegendNFT is ERC721Enumerable {
 
     function getAccessControlContract() public view returns (address) {
         return address(_accessControl);
-    }
-
-    function getLegendEscrowContract() public view returns (address) {
-        return address(_legendEscrow);
     }
 
     function getLegendCollectionContract() public view returns (address) {

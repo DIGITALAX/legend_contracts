@@ -1,104 +1,104 @@
-// // SPDX-License-Identifier: UNLICENSE
-// pragma solidity 0.8.6;
+// SPDX-License-Identifier: UNLICENSE
+pragma solidity 0.8.6;
 
-// import {AutomationRegistryInterface, State, OnchainConfig} from "@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface2_0.sol";
-// import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import {AutomationRegistryInterface, State, OnchainConfig} from "@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface2_0.sol";
+import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
-// interface KeeperRegistrarInterface {
-//     function register(
-//         string memory name,
-//         bytes calldata encryptedEmail,
-//         address upkeepContract,
-//         uint32 gasLimit,
-//         address adminAddress,
-//         bytes calldata checkData,
-//         bytes calldata offchainConfig,
-//         uint96 amount,
-//         address sender
-//     ) external;
-// }
+interface KeeperRegistrarInterface {
+    function register(
+        string memory name,
+        bytes calldata encryptedEmail,
+        address upkeepContract,
+        uint32 gasLimit,
+        address adminAddress,
+        bytes calldata checkData,
+        bytes calldata offchainConfig,
+        uint96 amount,
+        address sender
+    ) external;
+}
 
-// contract UpkeepIDConsumer {
-//     LinkTokenInterface public immutable i_link;
-//     address public immutable registrar;
-//     AutomationRegistryInterface public immutable i_registry;
-//     bytes4 registerSig = KeeperRegistrarInterface.register.selector;
+contract UpkeepIDConsumer {
+    LinkTokenInterface public immutable i_link;
+    address public immutable registrar;
+    AutomationRegistryInterface public immutable i_registry;
+    bytes4 registerSig = KeeperRegistrarInterface.register.selector;
 
-//     event UpkeepRegistered(
-//         uint256 indexed upkeepID,
-//         address sender,
-//         string name,
-//         address upkeepContract
-//     );
+    event UpkeepRegistered(
+        uint256 indexed upkeepID,
+        address sender,
+        string name,
+        address upkeepContract
+    );
 
-//     constructor(
-//         LinkTokenInterface _link,
-//         address _registrar,
-//         AutomationRegistryInterface _registry
-//     ) {
-//         i_link = _link;
-//         registrar = _registrar;
-//         i_registry = _registry;
-//     }
+    constructor(
+        LinkTokenInterface _link,
+        address _registrar,
+        AutomationRegistryInterface _registry
+    ) {
+        i_link = _link;
+        registrar = _registrar;
+        i_registry = _registry;
+    }
 
-//     function registerAndPredictID(
-//         string memory name,
-//         bytes calldata encryptedEmail,
-//         address upkeepContract,
-//         uint32 gasLimit,
-//         address adminAddress,
-//         bytes calldata checkData,
-//         bytes calldata offchainConfig,
-//         uint96 amount
-//     ) public {
-//         (State memory state, , , , ) = i_registry.getState();
-//         uint256 oldNonce = state.nonce;
-//         bytes memory payload = abi.encode(
-//             name,
-//             encryptedEmail,
-//             upkeepContract,
-//             gasLimit,
-//             adminAddress,
-//             checkData,
-//             offchainConfig,
-//             amount,
-//             address(this)
-//         );
+    function registerAndPredictID(
+        string memory name,
+        bytes calldata encryptedEmail,
+        address upkeepContract,
+        uint32 gasLimit,
+        address adminAddress,
+        bytes calldata checkData,
+        bytes calldata offchainConfig,
+        uint96 amount
+    ) public {
+        (State memory state, , , , ) = i_registry.getState();
+        uint256 oldNonce = state.nonce;
+        bytes memory payload = abi.encode(
+            name,
+            encryptedEmail,
+            upkeepContract,
+            gasLimit,
+            adminAddress,
+            checkData,
+            offchainConfig,
+            amount,
+            address(this)
+        );
 
-//         i_link.transferAndCall(
-//             registrar,
-//             amount,
-//             bytes.concat(registerSig, payload)
-//         );
-//         (state, , , , ) = i_registry.getState();
-//         uint256 newNonce = state.nonce;
+        i_link.transferAndCall(
+            registrar,
+            amount,
+            bytes.concat(registerSig, payload)
+        );
+        (state, , , , ) = i_registry.getState();
+        uint256 newNonce = state.nonce;
 
-//         string memory grantName = name;
-//         address keeperContract = upkeepContract;
+        string memory grantName = name;
+        address keeperContract = upkeepContract;
 
-//         if (newNonce == oldNonce + 1) {
-//             uint256 upkeepID = uint256(
-//                 keccak256(
-//                     abi.encodePacked(
-//                         blockhash(block.number - 1),
-//                         address(i_registry),
-//                         uint32(oldNonce)
-//                     )
-//                 )
-//             );
-//             emit UpkeepRegistered(
-//                 upkeepID,
-//                 msg.sender,
-//                 grantName,
-//                 keeperContract
-//             );
-//         } else {
-//             revert("auto-approve disabled");
-//         }
-//     }
+        if (newNonce == oldNonce + 1) {
+            uint256 upkeepID = uint256(
+                keccak256(
+                    abi.encodePacked(
+                        blockhash(block.number - 1),
+                        address(i_registry),
+                        uint32(oldNonce)
+                    )
+                )
+            );
+            emit UpkeepRegistered(
+                upkeepID,
+                msg.sender,
+                grantName,
+                keeperContract
+            );
+        } else {
+            revert("auto-approve disabled");
+        }
+    }
 
-//     receive() external payable {}
+    receive() external payable {}
 
-//     // Fallback function is called when msg.data is not empty
-//     fallback() external payable {}
-// }
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
+}

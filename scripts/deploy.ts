@@ -32,16 +32,16 @@ const main = async () => {
     // const LegendDrop = await ethers.getContractFactory("LegendDrop");
     // const LegendEscrow = await ethers.getContractFactory("LegendEscrow");
 
-    // const UpkeepIDConsumerExample = await ethers.getContractFactory(
-    //   "UpkeepIDConsumer"
-    // );
+    const UpkeepIDConsumerExample = await ethers.getContractFactory(
+      "UpkeepIDConsumer"
+    );
 
     // deploy
-    // const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
-    //   MUMBAI_LINK_TOKEN,
-    //   "0x57A4a13b35d25EE78e084168aBaC5ad360252467",
-    //   KEEPER_REGISTRY_MUMBAI
-    // );
+    const upkeepIDConsumerExample = await UpkeepIDConsumerExample.deploy(
+      MATIC_LINK_TOKEN,
+      "0x57A4a13b35d25EE78e084168aBaC5ad360252467",
+      KEEPER_REGISTRY_MATIC
+    );
     // const accessControl = await GlobalAccessControl.deploy(
     //   "GlobalLegendAccessControl",
     //   "GLAC"
@@ -148,14 +148,14 @@ const main = async () => {
     //   address: "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
     //   constructorArguments: ["GlobalLegendAccessControl", "GLAC"],
     // });
-    await run(`verify:verify`, {
-      address: "0x3723387De6d07A7da332f0FeD7a4d0e11845d2c3",
-      constructorArguments: [
-        "LegendFactory",
-        "LFAC",
-        "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
-      ],
-    });
+    // await run(`verify:verify`, {
+    //   address: "0x3723387De6d07A7da332f0FeD7a4d0e11845d2c3",
+    //   constructorArguments: [
+    //     "LegendFactory",
+    //     "LFAC",
+    //     "0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C",
+    //   ],
+    // });
     // await run(`verify:verify`, {
     //   address: "0x86252789Adf119290Bb20DC0047d5cd4FdD6E213",
     //   constructorArguments: ["0xBB5FaA448C3bc59497cDebc33e62a3eE8A90be8C"],
