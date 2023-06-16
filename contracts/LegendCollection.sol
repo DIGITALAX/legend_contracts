@@ -72,6 +72,7 @@ contract LegendCollection {
         uint256 indexed collectionId,
         string uri,
         uint256 amountMinted,
+        uint256[] tokenIdsMinted,
         address owner
     );
 
@@ -88,11 +89,6 @@ contract LegendCollection {
         uint256 indexed collectionId,
         uint256 amount,
         address owner
-    );
-
-    event CollectionBurned(
-        address indexed burner,
-        uint256 indexed collectionId
     );
 
     event CollectionURIUpdated(
@@ -313,6 +309,11 @@ contract LegendCollection {
     {
         address _creator = msg.sender;
         require(
+            _collections[_collectionId].amount == type(uint256).max,
+            "LegendCollection: Collection cannot be added to."
+        );
+
+        require(
             !_collections[_collectionId].isDeleted,
             "LegendCollection: This collection has been deleted"
         );
@@ -423,17 +424,25 @@ contract LegendCollection {
                 "LegendCollection: Cannot mint more than collection amount"
             );
 
+            uint256 initialSupply = _legendNFT.getTotalSupplyCount();
+
             for (uint256 i = 0; i < _amounts[c]; i++) {
-                uint256 tokenId = _legendNFT.getTotalSupplyCount() + 1;
                 _mintNFT(
                     _collections[_collectionIds[c]],
                     _pubId[_collectionIds[c]],
-                    tokenId,
+                    _amounts[c],
                     _dynamicNFTAddress[_collectionIds[c]],
                     collection.creator,
                     _purchaserAddress
                 );
-                collection.tokenIds.push(tokenId);
+            }
+
+            uint256 finalSupply = _legendNFT.getTotalSupplyCount();
+            uint256[] memory emissionArray = new uint256[](_amounts[c]);
+
+            for (uint256 i = initialSupply + 1; i <= finalSupply; i++) {
+                collection.tokenIds.push(i);
+                emissionArray[i - (initialSupply + 1)] = i;
                 collection.mintedTokens++;
             }
 
@@ -441,6 +450,7 @@ contract LegendCollection {
                 collection.collectionId,
                 collection.uri,
                 _amounts[c],
+                emissionArray,
                 collection.creator
             );
         }
