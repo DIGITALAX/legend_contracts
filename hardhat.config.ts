@@ -1,5 +1,5 @@
 require("dotenv").config({ path: ".env" });
-import "@nomiclabs/hardhat-etherscan";
+import "@nomiclabs/hardhat-ethers";
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -51,3 +51,4 @@ module.exports = {
     artifacts: "./artifacts",
   },
 };
+

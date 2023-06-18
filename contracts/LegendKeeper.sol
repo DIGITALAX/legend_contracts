@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSE
 pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
